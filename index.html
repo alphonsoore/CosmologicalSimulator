@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>COSMOLOGICAL SIMULATOR v1.0</title>
+<style>
+:root {
+  --bg: #c0c0c0;
+  --dk: #808080;
+  --lt: #ffffff;
+  --navy: #000080;
+  --navy2: #1084d0;
+  --black: #000000;
+  --space: #000008;
+  --green: #00cc00;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  font-family: 'MS Sans Serif','Microsoft Sans Serif',Tahoma,sans-serif;
+  font-size: 11px;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  color: var(--black);
+  user-select: none;
+}
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 16px; background: var(--bg); }
+::-webkit-scrollbar-thumb {
+  background: var(--bg);
+  border: 2px solid;
+  border-color: var(--lt) var(--dk) var(--dk) var(--lt);
+}
+::-webkit-scrollbar-track { background: #a0a0a0; }
+/* ── WIN95 COMPONENTS ── */
+.raised {
+  border: 2px solid;
+  border-color: var(--lt) var(--dk) var(--dk) var(--lt);
+}
+.sunken {
+  border: 2px solid;
+  border-color: var(--dk) var(--lt) var(--lt) var(--dk);
+}
+.win-panel {
+  background: var(--bg);
+  border: 2px solid;
+  border-color: var(--lt) var(--dk) var(--dk) var(--lt);
+  margin-bottom: 4px;
+}
+.win-title {
+  background: linear-gradient(90deg, var(--navy) 0%, var(--navy2) 100%);
+  color: #fff;
+  font-weight: bold;
+  font-size: 11px;
+  padding: 2px 6px;
+  letter-spacing: 0.3px;
+}
+.win-body { padding: 5px 6px; }
+.win-inset {
+  border: 2px solid;
+  border-color: var(--dk) var(--lt) var(--lt) var(--dk);
+  padding: 4px 5px;
+  background: var(--bg);
+}
+.win-btn {
+  background: var(--bg);
+  border: 2px solid;
+  border-color: var(--lt) var(--dk) var(--dk) var(--lt);
+  padding: 2px 8px;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  outline: none;
+  min-width: 52px;
+}
+.win-btn:active {
+  border-color: var(--dk) var(--lt) var(--lt) var(--dk);
+  padding: 3px 7px 1px 9px;
+}
+.win-btn:focus { outline: 1px dotted #000; outline-offset: -4px; }
+/* ── LAYOUT ── */
+#controls {
+  width: 230px;
+  min-width: 230px;
+  background: var(--bg);
+  border-right: 2px solid var(--dk);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 3px;
+  display: flex;
+  flex-direction: column;
+}
+#viewport {
+  flex: 1;
+  position: relative;
+  background: var(--space);
+  overflow: hidden;
+}
+canvas { display: block; cursor: crosshair; }
+canvas.drag { cursor: grabbing; }
+/* ── STATUS BAR ── */
+#statusbar {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 22px; background: var(--bg);
+  border-top: 1px solid var(--dk);
+  display: flex; align-items: center; padding: 0 2px;
+}
+.sb {
+  border: 1px solid; border-color: var(--dk) var(--lt) var(--lt) var(--dk);
+  padding: 2px 6px; font-size: 10px; white-space: nowrap; margin: 2px;
+}
+.sb-flex { flex: 1; }
+/* ── FORM ELEMENTS ── */
+label {
+  display: flex; align-items: center; gap: 5px;
+  padding: 1px 2px; cursor: pointer; line-height: 16px;
+  border: 1px solid transparent;
+}
+label:hover { background: #a0d0ff; border-color: #8080ff; }
+.planet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+input[type="range"] {
+  -webkit-appearance: none; width: 100%;
+  height: 20px; background: transparent; outline: none; margin: 2px 0;
+}
+input[type="range"]::-webkit-slider-track {
+  height: 4px; background: #888888;
+  border: 1px solid; border-color: #606060 #dfdfdf #dfdfdf #606060;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 22px;
+  background: var(--bg);
+  border: 2px solid; border-color: var(--lt) var(--dk) var(--dk) var(--lt);
+  cursor: pointer; margin-top: -10px;
+}
+.mono {
+  background: #000000; color: var(--green);
+  font-family: 'Courier New',monospace; font-size: 10px;
+  padding: 5px 6px;
+  border: 2px solid; border-color: var(--dk) var(--lt) var(--lt) var(--dk);
+  line-height: 1.6; letter-spacing: 0.2px;
+}
+.sep { height: 1px; background: var(--dk); box-shadow: 0 1px 0 var(--lt); margin: 4px 0; }
+.btn-row { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+.vval { font-size: 10px; color: var(--navy); text-align: right; margin-top: 1px; }
+#loading {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  color: #666; font-family: monospace; font-size: 13px;
+}
+/* cosmology info tooltip */
+.cosm-desc {
+  font-size: 9px; color: #444; line-height: 1.4; margin-top: 3px;
+  padding: 3px 4px;
+  background: #d8d8d8;
+  border: 1px solid #a0a0a0;
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ LEFT PANEL ═══ -->
+<div id="controls">
+
+  <div class="win-panel">
+    <div class="win-title" style="text-align:center;font-size:12px;padding:4px 6px;">
+      ☿ COSMOLOGICAL SIMULATOR
+    </div>
+    <div class="win-body" style="font-size:9px;color:#000060;text-align:center;padding:3px 6px;">
+      Three-Dimensional Orrery Engine v1.0<br>
+      Classical &amp; Modern Cosmologies
+    </div>
+  </div>
+
+  <!-- COSMOLOGICAL MODEL -->
+  <div class="win-panel">
+    <div class="win-title">Cosmological Model</div>
+    <div class="win-body">
+      <div class="win-inset">
+        <label><input type="radio" name="cosm" value="copernican" checked>
+          ☀ Copernican (Heliocentric)</label>
+        <label><input type="radio" name="cosm" value="tychonian">
+          ⊕ Tychonian (Geo-Heliocentric)</label>
+        <label><input type="radio" name="cosm" value="ptolemaic">
+          ✦ Ptolemaic (Geocentric+Epicycles)</label>
+        <label><input type="radio" name="cosm" value="mancentric">
+          ♟ Man-Centric (Surface Observer)</label>
+      </div>
+      <div class="cosm-desc" id="cosm-desc">
+        Sun at centre. Planets orbit in circles. True heliocentric geometry.
+      </div>
+    </div>
+  </div>
+
+  <!-- CELESTIAL BODIES -->
+  <div class="win-panel">
+    <div class="win-title">Celestial Bodies</div>
+    <div class="win-body">
+      <div class="win-inset">
+        <div class="planet-grid" id="body-checks">
+          <label><input type="checkbox" name="body" value="sun" checked>
+            <span style="color:#ffcc00;">☉</span>&nbsp;Sun</label>
+          <label><input type="checkbox" name="body" value="moon" checked>
+            <span style="color:#b0b0b0;">☽</span>&nbsp;Moon</label>
+          <label><input type="checkbox" name="body" value="mercury" checked>
+            <span style="color:#9a9a9a;">☿</span>&nbsp;Mercury</label>
+          <label><input type="checkbox" name="body" value="venus" checked>
+            <span style="color:#e8d0a0;">♀</span>&nbsp;Venus</label>
+          <label><input type="checkbox" name="body" value="earth" checked>
+            <span style="color:#3366cc;">♁</span>&nbsp;Earth</label>
+          <label><input type="checkbox" name="body" value="mars" checked>
+            <span style="color:#cc3311;">♂</span>&nbsp;Mars</label>
+          <label><input type="checkbox" name="body" value="jupiter" checked>
+            <span style="color:#c8883a;">♃</span>&nbsp;Jupiter</label>
+          <label><input type="checkbox" name="body" value="saturn" checked>
+            <span style="color:#e0d080;">♄</span>&nbsp;Saturn</label>
+        </div>
+        <div class="btn-row">
+          <button class="win-btn" id="btn-all">All</button>
+          <button class="win-btn" id="btn-none">None</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- THE MAN -->
+  <div class="win-panel">
+    <div class="win-title">The Man</div>
+    <div class="win-body">
+      <div class="win-inset">
+        <label><input type="checkbox" id="opt-man" checked> Show Man</label>
+        <div class="sep"></div>
+        <div style="font-size:10px;margin-bottom:2px;">Walking Speed (laps/day):</div>
+        <input type="range" id="man-speed-sl" min="0" max="1" value="0.012" step="0.001">
+        <div class="vval" id="man-speed-val">0.012 laps/day</div>
+        <div style="font-size:9px;color:#555;margin-top:2px;" id="man-speed-km"></div>
+        <div class="sep"></div>
+        <div style="font-size:10px;margin-bottom:3px;">Direction:</div>
+        <div class="btn-row">
+          <button class="win-btn" id="man-dir-with" style="background:#c8d8c8;border-color:#446644 #88aa88 #88aa88 #446644;">
+            ↻ With Earth</button>
+          <button class="win-btn" id="man-dir-against">↺ Against</button>
+          <button class="win-btn" id="man-stop">⏹ Stop</button>
+        </div>
+        <div style="font-size:9px;color:#555;margin-top:3px;">
+          Earth rotates: 1 lap/day<br>
+          Man is walking <span id="man-dir-label">with</span> rotation.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SPEED -->
+  <div class="win-panel">
+    <div class="win-title">Simulation Speed</div>
+    <div class="win-body">
+      <div class="win-inset">
+        <input type="range" id="speed-sl" min="-1.5" max="4.5" step="0.05" value="1.5">
+        <div class="vval" id="speed-val">31.6 days/sec</div>
+        <div class="sep"></div>
+        <div class="btn-row">
+          <button class="win-btn" id="btn-pause">⏸ Pause</button>
+          <button class="win-btn" id="btn-rev">◀ Rev.</button>
+          <button class="win-btn" id="btn-reset">⟳ Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DISPLAY OPTIONS -->
+  <div class="win-panel">
+    <div class="win-title">Display Options</div>
+    <div class="win-body">
+      <div class="win-inset">
+        <label><input type="checkbox" id="opt-labels" checked> Symbol Labels</label>
+        <label><input type="checkbox" id="opt-orbits" checked> Orbit Rings</label>
+        <label><input type="checkbox" id="opt-machinery"> Epicycles / Deferents</label>
+        <label><input type="checkbox" id="opt-grid"> Ecliptic Grid</label>
+        <label><input type="checkbox" id="opt-stellatum" checked> Stellatum (Sphere of Fixed Stars)</label>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- TRAJECTORIES -->
+  <div class="win-panel">
+    <div class="win-title">Trajectories</div>
+    <div class="win-body">
+      <div class="win-inset">
+        <div class="planet-grid">
+          <label><input type="checkbox" name="trail" value="sun" checked>
+            <span style="color:#ffcc00;">☉</span>&nbsp;Sun</label>
+          <label><input type="checkbox" name="trail" value="moon" checked>
+            <span style="color:#b0b0b0;">☽</span>&nbsp;Moon</label>
+          <label><input type="checkbox" name="trail" value="mercury" checked>
+            <span style="color:#9a9a9a;">☿</span>&nbsp;Mercury</label>
+          <label><input type="checkbox" name="trail" value="venus" checked>
+            <span style="color:#e8d0a0;">♀</span>&nbsp;Venus</label>
+          <label><input type="checkbox" name="trail" value="earth" checked>
+            <span style="color:#3366cc;">♁</span>&nbsp;Earth</label>
+          <label><input type="checkbox" name="trail" value="mars" checked>
+            <span style="color:#cc3311;">♂</span>&nbsp;Mars</label>
+          <label><input type="checkbox" name="trail" value="jupiter" checked>
+            <span style="color:#c8883a;">♃</span>&nbsp;Jupiter</label>
+          <label><input type="checkbox" name="trail" value="saturn" checked>
+            <span style="color:#e0d080;">♄</span>&nbsp;Saturn</label>
+        </div>
+        <div class="sep"></div>
+        <div style="font-size:10px;margin-bottom:2px;">Trail Points (length):</div>
+        <input type="range" id="trail-sl" min="100" max="8000" value="800" step="100">
+        <div class="vval" id="trail-val">800 pts</div>
+        <div style="font-size:10px;margin-bottom:2px;margin-top:4px;">Sample Density (d/sample):</div>
+        <input type="range" id="density-sl" min="0.002" max="0.5" value="0.01" step="0.002">
+        <div class="vval" id="density-val">0.01 d/sample</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CELESTIAL SPHERES -->
+  <div class="win-panel">
+    <div class="win-title">Celestial Spheres</div>
+    <div class="win-body">
+      <div class="win-inset">
+        <label><input type="checkbox" id="sph-moon">   ☽ Moon's Sphere</label>
+        <label><input type="checkbox" id="sph-mercury"> ☿ Mercury's Sphere</label>
+        <label><input type="checkbox" id="sph-venus">   ♀ Venus' Sphere</label>
+        <label><input type="checkbox" id="sph-sun">     ☉ Sun's Sphere</label>
+        <label><input type="checkbox" id="sph-mars">    ♂ Mars' Sphere</label>
+        <label><input type="checkbox" id="sph-jupiter"> ♃ Jupiter's Sphere</label>
+        <label><input type="checkbox" id="sph-saturn">  ♄ Saturn's Sphere</label>
+        <label><input type="checkbox" id="sph-stellatum"><i>Stellatum</i></label>
+        <label><input type="checkbox" id="sph-primum">  <i>Primum Mobile</i></label>
+        <div class="sep"></div>
+        <div class="btn-row">
+          <button class="win-btn" id="sph-all">All</button>
+          <button class="win-btn" id="sph-none">None</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EPHEMERIS -->
+  <div class="win-panel">
+    <div class="win-title">Ephemeris / Status</div>
+    <div class="win-body">
+      <div class="mono" id="ephemeris">
+        INITIALISING...<br>&nbsp;<br>&nbsp;<br>&nbsp;<br>&nbsp;
+      </div>
+    </div>
+  </div>
+
+  <!-- NAVIGATION HELP -->
+  <div class="win-panel">
+    <div class="win-title">Navigation</div>
+    <div class="win-body" style="font-size:9px;line-height:1.6;color:#222;padding:4px 6px;">
+      <b>LMB drag:</b> Rotate / Roll (Man-Centric)<br>
+      <b>RMB drag:</b> Pan view<br>
+      <b>Scroll:</b> Zoom in / out<br>
+      <b>Dbl-click body:</b> Follow it<br>
+      <b>Dbl-click space:</b> Unfollow<br>
+      <b>Dbl-right-click:</b> Reset camera<br>
+      <b>Middle drag:</b> Pan view
+    </div>
+  </div>
+
+</div><!-- /controls -->
+
+<!-- ═══ VIEWPORT ═══ -->
+<div id="viewport">
+  <div id="loading">☿ Initialising orrery engine...</div>
+  <div id="statusbar">
+    <div class="sb" id="sb-model">Copernican</div>
+    <div class="sb" id="sb-time">Year +0.000</div>
+    <div class="sb" id="sb-speed">31.6 d/s</div>
+    <div class="sb sb-flex">LMB:Rotate · RMB:Pan · Scroll:Zoom · Dbl:Follow · Dbl-RMB:Reset</div>
+    <div class="sb" id="sb-fps">FPS:--</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════
+//  COSMOLOGICAL SIMULATOR  –  Three.js r128
+// ═══════════════════════════════════════════════════════
+
+const DEG = Math.PI / 180;
+const AU  = 50;   // three-units per astronomical unit
+
+// ── ORBITAL DATA ──────────────────────────────────────
+// i = inclination (°), Omega = ascending node longitude (°)
+// L0 = initial mean longitude at epoch (°)
+// type: star|inner|earth|outer|moon
+const BODIES = {
+  sun:    {sma:0,     period:1e15,    color:0xffcc00,radius:5.5,symbol:'☉',i:0,   Omega:0,    L0:0,    type:'star' },
+  mercury:{sma:0.387, period:87.97,   color:0x9a9a9a,radius:1.4,symbol:'☿',i:7.00,Omega:48.3, L0:252.2,type:'inner'},
+  venus:  {sma:0.723, period:224.70,  color:0xe8d0a0,radius:2.3,symbol:'♀',i:3.39,Omega:76.7, L0:181.9,type:'inner'},
+  earth:  {sma:1.000, period:365.25,  color:0x3366cc,radius:2.4,symbol:'♁',i:0,   Omega:0,    L0:100.5,type:'earth'},
+  moon:   {sma:0,     period:27.322,  color:0xb0b0b0,radius:1.1,symbol:'☽',i:5.14,Omega:125.0,L0:0,    type:'moon', moonR:12},
+  mars:   {sma:1.524, period:686.97,  color:0xcc3311,radius:2.0,symbol:'♂',i:1.85,Omega:49.6, L0:355.4,type:'outer'},
+  jupiter:{sma:5.203, period:4332.59, color:0xc8883a,radius:3.8,symbol:'♃',i:1.30,Omega:100.5,L0:34.4, type:'outer'},
+  saturn: {sma:9.537, period:10759.22,color:0xe0d080,radius:3.2,symbol:'♄',i:2.49,Omega:113.7,L0:50.1, type:'outer'},
+};
+const NAMES = Object.keys(BODIES);
+
+const COSM_DESC = {
+  copernican: 'Sun at centre. Planets orbit in circles. True heliocentric geometry.',
+  tychonian:  'Earth at centre. Sun orbits Earth; planets orbit the Sun. Planet positions are geocentric, but orbit rings follow the Sun.',
+  ptolemaic:  'Earth at fixed centre. Planets move on epicycles rolling on deferents. Eccentric & equant approximate retrograde loops.',
+  mancentric: 'Copernican geometry is the underlying truth — but re-expressed from the standpoint of a fixed surface observer. All heliocentric positions are geocentrically transformed, then rotated by Earth\'s 1-day diurnal spin, placing the man as the immovable centre of all celestial motion.',
+};
+
+// ── SIMULATION STATE ──────────────────────────────────
+const S = {
+  time:       0,
+  speedExp:   1.5,
+  paused:     false,
+  reversed:   false,
+  cosmology:  'copernican',
+  enabled:    new Set(NAMES),
+  showLabels: true,
+  showTrails: true,  // now per-body via trailEnabled
+  trailEnabled: new Set(['sun','moon','mercury','venus','earth','mars','jupiter','saturn']),
+  showMan: true,
+  showOrbits: true,
+  showMachinery: false,
+  showGrid:   false,
+  trailLen:   800,
+  sampleInterval: 0.01,
+  followTarget: null,
+  showStellatum: true,
+  showSpheres: false,
+  manRoll: 0,
+};
+
+// ── THREE.JS GLOBALS ──────────────────────────────────
+let scene, camera, renderer, sunLight;
+const meshes    = {};
+const labels    = {};
+const trailObjs = {};   // name → {buf,arr,geo,line}
+const orbitRings= {};   // name → THREE.Line  (orbit circles)
+const mach      = {};   // name → {def,epi,dot,arm1,arm2}
+let sunGlow = null, earthSphere = null, manGroup = null, eclipticGrid = null, stellatum = null;
+const crystalSpheres = {};
+
+// Camera spherical
+const cam = { theta:0.5, phi:1.1, r:280, tx:0, ty:0, tz:0 };
+let isDrag=false, isPan=false, lmx=0, lmy=0;
+
+// Timing
+let lastT=0, fc=0, fpsT=0, fps=0;
+let trailAccum=0;
+
+// ── TRAIL RING-BUFFER ─────────────────────────────────
+class TrailBuf {
+  constructor(n){ this.n=n; this.d=new Array(n).fill(null); this.w=0; this.c=0; }
+  push(v){ this.d[this.w]={x:v.x,y:v.y,z:v.z}; this.w=(this.w+1)%this.n; if(this.c<this.n)this.c++; }
+  fill(arr){
+    const s=this.c<this.n?0:this.w;
+    for(let i=0;i<this.c;i++){
+      const p=this.d[(s+i)%this.n];
+      if(p){arr[i*3]=p.x;arr[i*3+1]=p.y;arr[i*3+2]=p.z;}
+    }
+  }
+  clear(){ this.d=new Array(this.n).fill(null); this.w=0; this.c=0; }
+  resize(newN){
+    const s=this.c<this.n?0:this.w;
+    const pts=[];
+    for(let i=0;i<this.c;i++){
+      const p=this.d[(s+i)%this.n]; if(p)pts.push(p);
+    }
+    this.n=newN; this.d=new Array(newN).fill(null); this.w=0; this.c=0;
+    for(const p of pts.slice(-newN)) this.push(p);
+  }
+}
+
+// ── POSITION MATHS ────────────────────────────────────
+function helioPos(name, t) {
+  if(name==='sun') return new THREE.Vector3(0,0,0);
+  const d=BODIES[name];
+  if(name==='moon'){
+    const ep=helioPos('earth',t);
+    const a=2*Math.PI*t/d.period;
+    const inc=d.i*DEG, O=d.Omega*DEG;
+    const r=d.moonR;
+    // orbital coords
+    const xo=r*Math.cos(a), yo=r*Math.sin(a);
+    const cosO=Math.cos(O),sinO=Math.sin(O),cosI=Math.cos(inc),sinI=Math.sin(inc);
+    const x= cosO*xo - sinO*cosI*yo;
+    const y= sinI*yo;
+    const z= sinO*xo + cosO*cosI*yo;
+    return ep.clone().add(new THREE.Vector3(x,y,z));
+  }
+  const theta=d.L0*DEG+(2*Math.PI/d.period)*t;
+  const inc=d.i*DEG, O=d.Omega*DEG;
+  const r=d.sma;
+  const cosO=Math.cos(O),sinO=Math.sin(O),cosI=Math.cos(inc),sinI=Math.sin(inc);
+  const cosT=Math.cos(theta),sinT=Math.sin(theta);
+  return new THREE.Vector3(
+    r*(cosO*cosT - sinO*cosI*sinT)*AU,
+    r*(sinI*sinT)*AU,
+    r*(sinO*cosT + cosO*cosI*sinT)*AU
+  );
+}
+
+// Man-centric constants
+const MC_R         = 8;    // visual Earth radius (scene units)
+let MC_WALK_RATE = 0.012; // laps per day (0 = stopped)
+let MC_WALK_DIR  = +1;   // +1 = with Earth rotation, -1 = against
+// Walk angle at time t (in days): 2π * t * rate * dir
+function manWalkAngle(t){ return 2*Math.PI*t*MC_WALK_RATE*MC_WALK_DIR; }
+
+// Man's true heliocentric pos: Earth centre + equatorial surface offset
+// rotating at walk speed (not Earth's 1-day spin => non-geostationary).
+// Subtracting this from any heliocentric pos gives position relative to man.
+function manHelioPos(t){
+  const ep=helioPos('earth',t);
+  const a=manWalkAngle(t);
+  return ep.clone().add(new THREE.Vector3(
+    MC_R*Math.sin(a), 0, MC_R*Math.cos(a)
+  ));
+}
+
+// Man's orientation axes at time t (world-space, man always at origin)
+function manAxes(t){
+  const a=manWalkAngle(t);
+  const up     =new THREE.Vector3(Math.sin(a),  0,  Math.cos(a));
+  const forward=new THREE.Vector3(Math.cos(a),  0, -Math.sin(a));
+  const right  =new THREE.Vector3().crossVectors(forward,up).normalize();
+  return {up,forward,right};
+}
+
+function dispPos(name, t) {
+  const hp=helioPos(name,t);
+  const ep=helioPos('earth',t);
+  switch(S.cosmology){
+    case 'copernican':
+      return hp.clone();
+    case 'tychonian':
+    case 'ptolemaic':
+      if(name==='earth') return new THREE.Vector3(0,0,0);
+      return hp.clone().sub(ep);
+    case 'mancentric': {
+      if(name==='earth') return new THREE.Vector3(1e6,1e6,1e6);
+      // Express every body relative to the man's true heliocentric position.
+      // No rotation matrix applied — diurnal motion emerges naturally from
+      // manHelioPos() tracing a tiny daily circle as the surface moves.
+      return hp.clone().sub(manHelioPos(t));
+    }
+  }
+  return hp.clone();
+}
+
+// ── GEOMETRY HELPERS ─────────────────────────────────
+function makeCirclePts(radius, segs=128){
+  const arr=new Float32Array((segs+1)*3);
+  for(let i=0;i<=segs;i++){
+    const a=(i/segs)*Math.PI*2;
+    arr[i*3]=radius*Math.cos(a); arr[i*3+1]=0; arr[i*3+2]=radius*Math.sin(a);
+  }
+  return arr;
+}
+function makeRing(r,col,op,segs=128){
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(makeCirclePts(r,segs),3));
+  const mat=new THREE.LineBasicMaterial({color:col,transparent:true,opacity:op});
+  return new THREE.Line(geo,mat);
+}
+function makeSaturnRings(inner,outer,segs=96){
+  const pos=[],idx=[];
+  for(let i=0;i<=segs;i++){
+    const a=(i/segs)*Math.PI*2, c=Math.cos(a),s=Math.sin(a);
+    pos.push(inner*c,0,inner*s, outer*c,0,outer*s);
+  }
+  for(let i=0;i<segs;i++){
+    const a=i*2,b=a+1,c=a+2,d=a+3;
+    idx.push(a,b,c,b,d,c);
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  geo.setIndex(idx);
+  return geo;
+}
+function makeArmLine(col,op){
+  const arr=new Float32Array(6);
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(arr,3));
+  const mat=new THREE.LineBasicMaterial({color:col,transparent:true,opacity:op,depthTest:false});
+  const line=new THREE.Line(geo,mat);
+  line._arr=arr;
+  return line;
+}
+
+// ── TEXTURES ─────────────────────────────────────────
+function glowTex(){
+  const c=document.createElement('canvas'); c.width=c.height=128;
+  const x=c.getContext('2d');
+  const g=x.createRadialGradient(64,64,0,64,64,64);
+  g.addColorStop(0,'rgba(255,240,80,1)');
+  g.addColorStop(0.12,'rgba(255,200,0,0.95)');
+  g.addColorStop(0.3,'rgba(255,130,0,0.6)');
+  g.addColorStop(0.6,'rgba(255,60,0,0.2)');
+  g.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g; x.fillRect(0,0,128,128);
+  return new THREE.CanvasTexture(c);
+}
+function labelTex(sym,col){
+  const c=document.createElement('canvas'); c.width=c.height=64;
+  const x=c.getContext('2d');
+  x.font='bold 32px serif';
+  x.fillStyle='#'+col.toString(16).padStart(6,'0');
+  x.shadowColor='rgba(0,0,0,0.9)'; x.shadowBlur=5;
+  x.textAlign='center'; x.textBaseline='middle';
+  x.fillText(sym,32,32);
+  return new THREE.CanvasTexture(c);
+}
+
+const STAR_DATA=[[-0.1875,-0.2876,0.9392,0.697,0.697,0.995,0.995],[-0.0632,-0.7954,0.6027,0.713,0.713,0.794,0.902],[-0.3739,-0.8732,-0.3126,0.846,0.793,0.401,0.846],[-0.7838,0.3286,-0.527,0.819,0.63,0.208,0.819],[0.1251,0.6264,-0.7694,0.566,0.566,0.809,0.809],[0.1305,0.7193,0.6823,0.802,0.73,0.337,0.802],[0.1951,-0.1427,0.9704,0.576,0.576,0.797,0.797],[-0.4181,0.0911,0.9038,0.728,0.728,0.508,0.765],[0.4927,-0.8409,0.2238,0.619,0.619,0.755,0.755],[0.0209,0.1289,0.9914,0.76,0.42,0.099,0.76],[-0.4239,-0.8693,-0.2543,0.642,0.642,0.736,0.736],[0.4592,0.1542,-0.8748,0.597,0.597,0.591,0.718],[0.3439,0.2842,0.895,0.706,0.467,0.136,0.706],[-0.4494,-0.8918,-0.0524,0.63,0.63,0.704,0.704],[-0.9141,-0.1936,-0.3563,0.607,0.607,0.69,0.69],[-0.3448,-0.4451,-0.8264,0.68,0.38,0.091,0.68],[-0.3915,0.4699,0.7912,0.67,0.57,0.201,0.67],[0.8373,-0.4943,-0.2336,0.503,0.503,0.619,0.667],[0.4557,0.7106,-0.5362,0.495,0.495,0.609,0.656],[-0.4938,-0.8633,-0.1043,0.573,0.573,0.656,0.656],[-0.8645,0.2073,0.4579,0.504,0.504,0.644,0.644],[-0.2214,-0.4844,0.8464,0.536,0.536,0.625,0.625],[-0.3406,0.5283,0.7778,0.442,0.442,0.6,0.615],[-0.538,-0.8397,-0.0736,0.614,0.393,0.11,0.614],[-0.0916,-0.6033,-0.7923,0.532,0.532,0.61,0.61],[0.1506,0.1106,0.9824,0.525,0.525,0.608,0.608],[0.1287,0.4788,0.8684,0.483,0.483,0.606,0.606],[-0.2588,-0.938,0.2306,0.454,0.454,0.604,0.604],[0.1036,-0.021,0.9944,0.505,0.505,0.6,0.6],[0.6029,-0.7309,-0.3198,0.475,0.475,0.595,0.595],[-0.5443,0.8286,-0.1307,0.424,0.424,0.593,0.593],[0.0838,-0.0339,0.9959,0.507,0.507,0.591,0.591],[-0.4591,0.8809,0.115,0.589,0.486,0.168,0.589],[0.405,0.7645,0.5016,0.582,0.582,0.363,0.589],[-0.363,-0.7354,0.5723,0.527,0.527,0.584,0.584],[0.0869,-0.5648,-0.8207,0.435,0.435,0.544,0.581],[-0.2956,-0.8617,0.4124,0.58,0.436,0.142,0.58],[-0.5815,0.7583,-0.2948,0.489,0.489,0.58,0.58],[-0.0723,-0.682,-0.7278,0.544,0.544,0.394,0.579],[-0.1096,-0.9338,-0.3407,0.574,0.399,0.122,0.574],[-0.1571,0.2823,0.9464,0.4,0.4,0.571,0.571],[0.3256,-0.8361,-0.4414,0.48,0.48,0.57,0.57],[-0.0941,-0.3083,0.9466,0.497,0.497,0.565,0.565],[-0.7779,-0.1506,0.61,0.565,0.393,0.12,0.565],[0.0101,0.9999,0.0079,0.565,0.548,0.305,0.565],[0.7797,0.3981,0.4833,0.562,0.449,0.152,0.562],[0.2141,-0.443,-0.8706,0.476,0.476,0.56,0.56],[-0.9667,0.2516,0.0462,0.411,0.411,0.506,0.545],[-0.2634,-0.4445,0.8562,0.583,0.555,0.294,0.583],[-0.6853,-0.593,-0.4228,0.555,0.47,0.165,0.555],[-0.1999,-0.95,-0.2399,0.444,0.439,0.257,0.444],[0.4391,-0.8261,-0.3532,0.446,0.446,0.55,0.55],[0.1958,0.0107,0.9806,0.384,0.384,0.373,0.458],[0.1817,0.1785,0.967,0.416,0.416,0.509,0.55],[0.3154,0.3963,-0.8622,0.483,0.404,0.141,0.483],[0.312,0.4595,-0.8316,0.04,0.04,0.025,0.04],[-0.7187,0.1041,0.6875,0.218,0.183,0.064,0.218],[-0.1178,-0.9084,-0.4013,0.308,0.308,0.374,0.406],[0.7412,-0.5344,0.4062,0.36,0.36,0.318,0.413],[-0.5578,-0.581,0.5927,0.034,0.034,0.032,0.04],[-0.5833,0.2183,-0.7824,0.155,0.138,0.06,0.155],[0.4593,0.552,-0.6959,0.55,0.464,0.163,0.55],[-0.354,-0.4645,0.8117,0.04,0.035,0.014,0.04],[-0.5475,-0.2087,-0.8104,0.271,0.271,0.236,0.309],[-0.0805,-0.5067,0.8583,0.396,0.396,0.421,0.421],[0.3565,-0.9058,0.2291,0.157,0.157,0.203,0.213],[0.2581,-0.1557,-0.9535,0.353,0.274,0.091,0.353],[0.681,0.7216,-0.1251,0.16,0.156,0.088,0.16],[-0.4149,0.0739,-0.9069,0.205,0.174,0.061,0.205],[-0.4021,0.9076,0.1203,0.421,0.365,0.14,0.421],[-0.2879,0.2779,0.9165,0.484,0.462,0.247,0.484],[0.1786,0.0607,-0.9821,0.276,0.276,0.386,0.386],[0.5095,0.8582,0.0627,0.096,0.095,0.055,0.096],[0.3229,0.8939,-0.3109,0.294,0.271,0.13,0.294],[0.774,0.5212,0.3595,0.358,0.358,0.498,0.498],[-0.063,0.7449,0.6642,0.45,0.424,0.217,0.45],[-0.8611,0.4599,-0.217,0.393,0.29,0.093,0.393],[-0.9247,0.0352,0.379,0.443,0.433,0.245,0.443],[-0.5174,0.1766,0.8373,0.446,0.342,0.113,0.446],[0.0772,0.8108,0.5802,0.531,0.466,0.19,0.531],[0.0709,0.338,0.9385,0.496,0.387,0.129,0.496],[0.8124,-0.1379,0.5666,0.276,0.276,0.221,0.305],[-0.123,0.3467,-0.9299,0.431,0.431,0.421,0.515],[0.558,-0.5027,-0.6603,0.315,0.281,0.121,0.315],[-0.7907,-0.4429,0.4226,0.042,0.042,0.044,0.044],[-0.8166,-0.5725,0.0739,0.355,0.307,0.118,0.355],[-0.1427,-0.6904,-0.7092,0.029,0.029,0.038,0.04],[-0.0059,-0.8857,-0.4643,0.25,0.25,0.216,0.284],[0.4382,-0.6851,-0.5819,0.526,0.468,0.201,0.526],[-0.3841,-0.5296,-0.7563,0.063,0.048,0.016,0.063],[0.0233,0.189,0.9817,0.247,0.247,0.312,0.332],[0.7394,-0.5915,-0.3216,0.381,0.381,0.332,0.435],[-0.7449,0.3434,0.572,0.391,0.379,0.21,0.391],[-0.0759,0.9969,0.0204,0.424,0.424,0.304,0.45],[-0.0476,0.8665,0.4969,0.065,0.065,0.047,0.069],[0.4587,0.4071,-0.7898,0.04,0.036,0.016,0.04],[-0.1,-0.9844,-0.1451,0.284,0.284,0.4,0.4],[0.4248,-0.7691,0.4775,0.255,0.255,0.255,0.255],[-0.1368,0.2097,0.9682,0.411,0.411,0.331,0.455],[-0.584,0.8107,0.0422,0.459,0.459,0.391,0.519],[-0.7935,-0.4466,0.4133,0.119,0.119,0.095,0.131],[-0.0548,0.1034,-0.9931,0.485,0.485,0.416,0.55],[0.5721,0.7662,0.2926,0.26,0.226,0.088,0.26],[-0.8073,0.2413,0.5385,0.029,0.029,0.039,0.04],[0.8703,0.4731,0.1366,0.04,0.035,0.014,0.04],[0.3295,-0.4664,-0.8209,0.489,0.489,0.51,0.51],[0.7808,-0.6137,0.117,0.078,0.066,0.023,0.078],[-0.6174,-0.2006,-0.7606,0.265,0.264,0.156,0.265],[0.5929,-0.7693,-0.238,0.469,0.402,0.146,0.469],[0.7702,-0.1309,0.6242,0.392,0.391,0.233,0.392],[-0.7853,0.0228,-0.6187,0.242,0.236,0.134,0.242],[0.5249,0.8512,0.0056,0.16,0.115,0.036,0.16],[-0.0475,0.3413,-0.9388,0.49,0.49,0.374,0.531],[-0.2807,0.696,0.6609,0.332,0.332,0.331,0.4],[-0.3578,-0.1832,0.9157,0.402,0.346,0.129,0.402],[-0.3132,0.0959,0.9448,0.407,0.349,0.128,0.407],[-0.8929,0.16,0.4209,0.265,0.265,0.238,0.306],[-0.5884,0.8024,0.1001,0.474,0.443,0.221,0.474],[0.861,0.0309,0.5077,0.38,0.329,0.126,0.38],[-0.3892,-0.5507,-0.7384,0.45,0.45,0.55,0.55],[0.0324,-0.0497,0.9982,0.373,0.373,0.53,0.53],[0.3146,0.3927,0.8642,0.432,0.372,0.14,0.432],[-0.0827,-0.9889,-0.1234,0.131,0.111,0.039,0.131],[0.1802,0.9159,0.3586,0.543,0.473,0.187,0.543],[0.0036,0.6967,0.7174,0.091,0.091,0.113,0.113],[-0.1919,0.0096,-0.9814,0.258,0.258,0.258,0.258],[0.0167,0.2753,0.9612,0.244,0.244,0.204,0.274],[-0.6687,-0.7233,-0.1724,0.155,0.155,0.131,0.175],[-0.1326,-0.8715,-0.4721,0.231,0.231,0.197,0.261],[-0.5145,0.8097,0.2823,0.174,0.16,0.076,0.174],[0.5265,0.5312,-0.6638,0.418,0.418,0.506,0.55],[-0.9376,0.2065,-0.2797,0.446,0.337,0.11,0.446],[-0.3088,-0.942,0.1317,0.167,0.167,0.132,0.183],[-0.6534,-0.7447,0.1358,0.346,0.318,0.152,0.346],[-0.2985,-0.9458,-0.1278,0.477,0.477,0.318,0.494],[-0.6263,0.504,0.5947,0.427,0.41,0.221,0.427],[0.24,-0.9612,0.1357,0.032,0.032,0.034,0.04],[0.1858,0.3035,-0.9345,0.04,0.031,0.011,0.04],[0.0884,-0.9592,0.2684,0.436,0.436,0.384,0.499],[0.1833,0.3989,0.8985,0.343,0.343,0.462,0.476],[-0.6786,0.4959,-0.5419,0.103,0.093,0.041,0.103],[-0.7191,0.43,0.5459,0.177,0.174,0.101,0.177],[-0.4218,-0.7962,-0.4338,0.08,0.08,0.059,0.086],[-0.6871,0.0119,0.7265,0.083,0.083,0.055,0.086],[0.2698,-0.7889,-0.5521,0.208,0.179,0.066,0.208],[-0.8123,0.4676,0.3486,0.32,0.32,0.417,0.417],[0.3565,0.0763,-0.9312,0.323,0.317,0.183,0.323],[0.4473,0.6615,-0.602,0.056,0.056,0.056,0.068],[0.0385,-0.0706,0.9968,0.355,0.232,0.067,0.355],[0.6686,0.4024,-0.6253,0.55,0.505,0.239,0.55],[0.5301,-0.8288,-0.1794,0.292,0.28,0.151,0.292],[-0.6083,-0.0184,-0.7935,0.427,0.427,0.518,0.518],[0.1639,0.3836,0.9088,0.169,0.169,0.239,0.239],[-0.777,0.4919,0.3928,0.17,0.159,0.081,0.17],[-0.1137,-0.4972,0.8602,0.461,0.384,0.134,0.461],[0.0594,-0.6297,-0.7746,0.295,0.248,0.087,0.295],[-0.8676,0.3948,-0.3023,0.075,0.075,0.075,0.075],[-0.892,-0.0612,-0.4479,0.466,0.444,0.235,0.466],[0.4467,0.8821,0.1494,0.098,0.098,0.066,0.102],[-0.3095,-0.8928,-0.3273,0.25,0.234,0.118,0.25],[-0.0516,0.9878,0.1467,0.104,0.104,0.135,0.135],[0.152,0.0451,0.9873,0.233,0.233,0.305,0.318],[0.1268,0.9801,-0.153,0.157,0.157,0.217,0.217],[0.7678,-0.5844,-0.2624,0.145,0.145,0.182,0.194],[0.4179,-0.6524,0.6323,0.401,0.401,0.55,0.55],[-0.2162,-0.537,0.8154,0.17,0.154,0.071,0.17],[-0.8219,-0.4228,-0.3818,0.149,0.149,0.145,0.178],[-0.9999,-0.0124,-0.003,0.549,0.549,0.549,0.549],[-0.8508,-0.3554,0.3872,0.519,0.346,0.101,0.519],[-0.3217,0.8321,-0.4517,0.219,0.219,0.166,0.237],[-0.6622,-0.0165,-0.7491,0.312,0.312,0.305,0.373],[0.589,-0.3404,-0.733,0.407,0.311,0.102,0.407],[-0.3689,-0.3535,0.8596,0.34,0.34,0.34,0.34],[-0.5462,0.0852,-0.8333,0.454,0.454,0.292,0.464],[-0.5546,0.5129,0.6553,0.137,0.126,0.059,0.137],[0.8916,-0.1238,-0.4356,0.502,0.391,0.13,0.502],[-0.9442,0.1045,-0.3123,0.04,0.033,0.011,0.04],[0.553,0.6643,0.5029,0.144,0.144,0.122,0.162],[0.0392,0.1025,0.994,0.045,0.045,0.045,0.045],[0.5873,-0.4475,-0.6744,0.334,0.33,0.191,0.334],[-0.2958,0.1739,0.9393,0.292,0.251,0.093,0.292],[-0.5597,0.1038,0.8222,0.311,0.254,0.087,0.311],[0.086,0.5511,0.83,0.132,0.132,0.105,0.146],[-0.713,0.3274,0.6201,0.036,0.036,0.04,0.04],[-0.3775,-0.926,0.0111,0.234,0.175,0.056,0.234],[-0.9292,0.0519,0.3658,0.128,0.128,0.159,0.159],[-0.8028,0.3096,0.5096,0.303,0.253,0.088,0.303],[-0.3361,0.2997,-0.8929,0.084,0.084,0.05,0.084],[0.6157,-0.24,-0.7505,0.161,0.153,0.081,0.161],[0.8696,0.4935,-0.0141,0.209,0.209,0.209,0.209],[0.6918,-0.1126,-0.7132,0.055,0.038,0.012,0.055],[-0.2606,-0.2503,0.9324,0.268,0.239,0.104,0.268],[-0.7424,0.585,-0.3264,0.526,0.433,0.15,0.526],[0.0325,0.8257,0.5632,0.233,0.233,0.284,0.308],[-0.0218,-0.4893,0.8718,0.112,0.087,0.029,0.112],[0.5428,-0.1165,0.8317,0.188,0.188,0.205,0.236],[-0.6351,-0.1514,-0.7574,0.088,0.082,0.04,0.088],[-0.1519,0.1319,0.9796,0.146,0.121,0.042,0.146],[0.9311,0.2128,0.2964,0.051,0.051,0.037,0.055],[-0.7472,-0.2954,-0.5953,0.217,0.148,0.045,0.217],[-0.3933,0.4419,-0.8063,0.075,0.075,0.092,0.092],[-0.5602,-0.3821,-0.7349,0.201,0.201,0.24,0.24],[-0.0634,-0.8197,-0.5692,0.144,0.135,0.068,0.144],[-0.3227,0.943,-0.0816,0.049,0.044,0.02,0.049],[0.4233,-0.4861,-0.7646,0.296,0.262,0.109,0.296],[-0.3377,-0.7697,0.5418,0.033,0.033,0.04,0.04],[0.324,-0.2684,-0.9072,0.406,0.406,0.522,0.55],[-0.4375,0.3447,-0.8305,0.1,0.1,0.063,0.101],[0.5784,-0.7833,-0.2278,0.55,0.452,0.156,0.55],[0.7154,-0.5573,-0.4215,0.081,0.081,0.087,0.101],[0.7735,-0.3956,-0.4951,0.492,0.417,0.147,0.492],[-0.5918,-0.8056,0.0274,0.305,0.305,0.198,0.312],[-0.0351,-0.691,-0.722,0.388,0.388,0.478,0.515],[0.3394,-0.9346,-0.1067,0.318,0.305,0.165,0.318],[0.6696,0.7109,-0.215,0.18,0.18,0.18,0.18],[-0.6177,-0.2037,0.7595,0.417,0.417,0.414,0.502],[0.5754,-0.0906,-0.8129,0.205,0.204,0.121,0.205],[0.1967,-0.5129,-0.8356,0.249,0.246,0.143,0.249],[0.7702,0.5303,0.3543,0.448,0.394,0.16,0.448],[0.3592,0.8011,0.4788,0.07,0.07,0.063,0.081],[-0.1681,-0.9484,-0.2687,0.12,0.115,0.062,0.12],[-0.0272,-0.0475,-0.9985,0.278,0.232,0.081,0.278],[0.7743,0.0077,0.6328,0.547,0.496,0.227,0.547],[-0.9874,-0.0839,-0.1339,0.294,0.294,0.298,0.298],[-0.7564,0.3722,0.5379,0.052,0.047,0.022,0.052],[-0.3851,-0.8686,-0.3117,0.21,0.198,0.102,0.21],[-0.9365,0.2109,0.2803,0.17,0.143,0.05,0.17],[0.1066,0.4417,-0.8908,0.223,0.223,0.308,0.313],[0.1275,-0.3221,0.9381,0.334,0.279,0.098,0.334],[-0.4921,-0.2514,-0.8334,0.044,0.039,0.016,0.044],[0.6826,0.6635,0.3063,0.516,0.511,0.299,0.516],[0.6878,-0.2928,0.6643,0.133,0.133,0.143,0.143],[-0.5888,0.1558,0.7931,0.196,0.188,0.101,0.196],[0.5439,-0.2649,-0.7963,0.243,0.219,0.097,0.243],[-0.7246,0.2854,-0.6273,0.041,0.037,0.017,0.041],[0.3871,0.4054,0.8282,0.321,0.321,0.301,0.377],[0.6724,0.7397,0.0258,0.342,0.286,0.1,0.342],[0.8544,0.4922,0.1666,0.332,0.264,0.089,0.332],[-0.522,-0.2599,0.8124,0.12,0.12,0.086,0.128],[-0.131,0.3239,0.937,0.319,0.318,0.189,0.319],[-0.1248,0.5099,0.8511,0.315,0.315,0.21,0.326],[-0.9392,0.3343,0.0791,0.346,0.253,0.08,0.346],[-0.1418,-0.9846,-0.1021,0.451,0.403,0.176,0.451],[-0.6666,0.4073,0.6243,0.095,0.084,0.035,0.095],[0.1789,-0.8558,-0.4853,0.547,0.327,0.085,0.547],[0.6401,0.1515,-0.7532,0.166,0.154,0.076,0.166],[-0.555,-0.7697,0.3157,0.386,0.349,0.157,0.386],[0.2678,0.8395,-0.4727,0.066,0.066,0.089,0.089],[0.0413,0.1777,0.9832,0.331,0.331,0.226,0.345],[-0.3729,-0.6637,0.6484,0.28,0.236,0.083,0.28],[0.7918,-0.3012,-0.5314,0.103,0.096,0.047,0.103],[-0.4272,-0.6457,-0.6329,0.248,0.248,0.228,0.289],[0.0239,0.5198,-0.854,0.032,0.032,0.043,0.043],[0.9033,-0.1156,0.4132,0.37,0.37,0.308,0.414],[0.9383,0.0147,0.3456,0.313,0.213,0.064,0.313],[0.607,0.7285,0.3176,0.22,0.192,0.075,0.22],[0.7895,-0.1005,-0.6055,0.181,0.181,0.143,0.199],[0.2811,-0.8763,0.3914,0.058,0.047,0.016,0.058],[-0.5005,0.4286,0.7522,0.473,0.458,0.253,0.473],[-0.9275,0.0455,0.3711,0.358,0.287,0.098,0.358],[-0.2018,-0.1825,0.9623,0.23,0.211,0.1,0.23],[-0.156,0.3131,-0.9368,0.056,0.056,0.072,0.072],[-0.4933,0.1655,0.854,0.372,0.269,0.085,0.372],[-0.7641,0.1901,0.6164,0.381,0.381,0.254,0.395],[-0.5804,0.5833,0.5682,0.189,0.161,0.058,0.189],[-0.3942,0.0528,-0.9175,0.26,0.26,0.329,0.329],[-0.6214,-0.2748,0.7338,0.449,0.359,0.122,0.449],[0.1012,-0.7249,0.6814,0.084,0.084,0.059,0.089],[0.6765,0.5417,0.4989,0.066,0.056,0.019,0.066],[0.069,-0.7379,-0.6714,0.479,0.449,0.228,0.479],[0.4915,-0.2643,-0.8298,0.033,0.033,0.033,0.04],[-0.7359,0.0549,0.6749,0.105,0.098,0.05,0.105],[0.2186,-0.7232,-0.6551,0.205,0.171,0.06,0.205],[0.5772,0.6918,0.4339,0.322,0.322,0.36,0.409],[0.0733,-0.4544,-0.8878,0.487,0.487,0.487,0.487],[0.174,-0.0977,0.9799,0.55,0.455,0.158,0.55],[0.9445,0.004,0.3284,0.04,0.04,0.024,0.04],[0.5864,0.4111,0.698,0.55,0.52,0.269,0.55],[-0.1423,0.0555,-0.9883,0.407,0.401,0.232,0.407],[-0.7085,0.5878,0.3905,0.508,0.47,0.229,0.508],[0.812,0.1935,-0.5507,0.277,0.267,0.147,0.277],[-0.8787,0.2296,0.4186,0.333,0.296,0.124,0.333],[-0.2868,-0.8288,-0.4805,0.377,0.377,0.527,0.533],[-0.1795,0.9621,-0.2054,0.55,0.55,0.329,0.55],[0.2278,-0.3104,-0.9229,0.212,0.199,0.101,0.212],[0.3762,0.5583,0.7394,0.149,0.149,0.174,0.174],[-0.5292,0.623,-0.576,0.105,0.105,0.108,0.128],[0.7691,-0.6011,0.2172,0.04,0.037,0.019,0.04],[-0.2065,0.9782,-0.02,0.427,0.413,0.229,0.427],[-0.5152,0.5617,0.6474,0.33,0.33,0.298,0.382],[0.6843,-0.264,0.6798,0.147,0.125,0.045,0.147],[-0.7924,0.6023,-0.0964,0.199,0.199,0.173,0.227],[0.4372,0.0909,-0.8947,0.486,0.486,0.369,0.526],[-0.7905,-0.1478,-0.5944,0.312,0.312,0.3,0.371],[0.6489,0.7401,0.1769,0.037,0.037,0.028,0.04],[0.4989,-0.8499,-0.1694,0.364,0.184,0.038,0.364],[0.2945,0.3588,-0.8857,0.372,0.372,0.49,0.49],[-0.7344,0.1345,0.6653,0.134,0.134,0.175,0.183],[0.9171,-0.256,-0.3055,0.186,0.186,0.223,0.243],[-0.5107,-0.5008,-0.6989,0.151,0.151,0.09,0.151],[-0.0642,-0.1075,0.9921,0.408,0.332,0.114,0.408],[0.5084,0.7057,0.4935,0.051,0.051,0.044,0.058],[-0.4032,-0.3051,0.8627,0.262,0.19,0.06,0.262],[-0.6521,-0.7573,-0.0359,0.35,0.35,0.492,0.492],[0.0803,-0.9474,-0.3097,0.361,0.327,0.149,0.361],[-0.4281,-0.8276,-0.3631,0.028,0.028,0.04,0.04],[-0.1941,0.0514,-0.9796,0.101,0.058,0.014,0.101],[-0.6229,-0.1001,-0.7759,0.375,0.292,0.097,0.375],[0.9687,-0.1348,-0.2085,0.5,0.46,0.219,0.5],[-0.4004,0.4187,0.8151,0.04,0.036,0.016,0.04],[-0.6283,-0.7497,-0.2078,0.234,0.234,0.203,0.267],[0.6742,-0.6916,-0.2591,0.16,0.155,0.087,0.16],[0.41,-0.9091,0.0739,0.184,0.184,0.222,0.242],[-0.8317,0.278,0.4807,0.164,0.164,0.213,0.213],[-0.1005,0.9133,0.3947,0.107,0.107,0.073,0.112],[0.2783,0.2133,0.9365,0.133,0.133,0.133,0.161],[-0.0686,0.7216,-0.6889,0.294,0.294,0.304,0.36],[-0.8657,-0.4651,0.1851,0.39,0.39,0.265,0.406],[-0.7264,0.2308,0.6474,0.077,0.069,0.031,0.077],[-0.8189,-0.3746,-0.4348,0.287,0.246,0.09,0.287],[-0.9957,-0.0025,-0.0924,0.04,0.04,0.04,0.04],[0.2076,-0.2942,0.9329,0.289,0.284,0.164,0.289],[0.7029,0.3085,-0.6409,0.265,0.233,0.095,0.265],[-0.8031,0.1406,0.579,0.204,0.204,0.222,0.255],[0.9305,0.3608,-0.0639,0.031,0.031,0.04,0.04],[-0.2543,0.8779,0.4058,0.458,0.365,0.124,0.458],[-0.9984,0.0002,-0.0573,0.439,0.439,0.368,0.493],[-0.9417,0.2125,0.2609,0.384,0.314,0.108,0.384],[-0.5593,-0.675,-0.4812,0.146,0.146,0.094,0.149],[0.4713,0.0647,-0.8796,0.4,0.336,0.118,0.4],[0.3873,-0.2633,-0.8836,0.033,0.033,0.04,0.04],[-0.1431,0.3761,-0.9155,0.238,0.238,0.264,0.3],[-0.1762,0.167,-0.9701,0.164,0.164,0.212,0.212],[0.5585,0.3615,0.7466,0.03,0.03,0.04,0.04],[0.2102,-0.9621,0.1736,0.459,0.459,0.325,0.485],[0.6378,-0.7238,0.2632,0.298,0.298,0.348,0.386],[-0.5233,0.051,-0.8506,0.472,0.403,0.145,0.472],[-0.5113,0.544,0.6653,0.187,0.187,0.145,0.204],[-0.3401,0.2202,-0.9142,0.37,0.37,0.339,0.431],[0.9012,-0.4048,-0.1549,0.446,0.446,0.282,0.453],[-0.2597,-0.3659,-0.8937,0.04,0.037,0.019,0.04],[0.6744,0.3532,0.6484,0.033,0.033,0.033,0.04],[-0.2117,0.4283,0.8785,0.319,0.311,0.176,0.319],[0.2957,0.0772,0.9521,0.174,0.137,0.046,0.174],[0.6329,0.2314,0.7389,0.382,0.382,0.328,0.433],[-0.2887,-0.895,-0.34,0.119,0.119,0.154,0.162],[0.6784,0.5415,0.4965,0.257,0.213,0.074,0.257],[0.9099,-0.3577,-0.2099,0.049,0.049,0.037,0.053],[0.8368,0.1483,0.5271,0.158,0.1,0.028,0.158],[0.2924,0.7645,0.5745,0.037,0.037,0.04,0.046],[0.5087,0.8521,-0.1234,0.247,0.148,0.039,0.247],[-0.0447,0.9782,0.2028,0.289,0.196,0.058,0.289],[0.3438,0.4732,0.8111,0.247,0.239,0.131,0.247],[0.8046,0.3385,0.4878,0.429,0.429,0.377,0.491],[-0.3854,-0.5039,0.773,0.437,0.42,0.228,0.437],[-0.287,0.4458,0.8479,0.198,0.198,0.198,0.198],[-0.1699,-0.8758,-0.4519,0.304,0.304,0.361,0.396],[0.7221,0.4071,-0.5593,0.504,0.439,0.172,0.504],[0.7884,-0.4099,-0.4587,0.446,0.407,0.189,0.446],[-0.0139,0.2115,-0.9773,0.258,0.233,0.106,0.258],[0.0137,0.5095,0.8604,0.421,0.421,0.525,0.525],[0.8747,0.1283,0.4674,0.258,0.231,0.1,0.258],[-0.9888,0.1454,-0.0341,0.35,0.35,0.275,0.384],[0.2727,0.1663,0.9476,0.28,0.274,0.156,0.28],[0.3589,-0.0931,-0.9287,0.31,0.251,0.086,0.31],[0.3132,0.4466,-0.8381,0.105,0.096,0.044,0.105],[-0.026,0.1566,-0.9873,0.375,0.187,0.037,0.375],[0.4647,-0.862,-0.2026,0.55,0.424,0.14,0.55],[-0.7085,0.5379,0.4567,0.035,0.035,0.031,0.04],[-0.6609,0.3655,0.6555,0.214,0.214,0.224,0.263],[-0.5426,-0.3045,-0.7829,0.223,0.223,0.264,0.264],[0.0201,-0.9931,0.1159,0.39,0.39,0.255,0.401],[-0.4605,0.0889,-0.8832,0.101,0.098,0.054,0.101],[-0.0777,0.8748,0.4782,0.507,0.42,0.146,0.507],[0.3603,-0.1615,-0.9188,0.066,0.058,0.022,0.066],[0.836,0.4811,0.264,0.438,0.42,0.228,0.438],[0.1401,0.7275,0.6717,0.262,0.262,0.198,0.283],[-0.108,-0.3622,-0.9258,0.187,0.127,0.038,0.187],[-0.3944,-0.3965,0.829,0.194,0.184,0.096,0.194],[0.4099,0.897,0.1652,0.051,0.043,0.015,0.051],[-0.6952,-0.1456,-0.7039,0.04,0.03,0.01,0.04],[0.2079,-0.3625,-0.9085,0.437,0.437,0.357,0.486],[-0.6143,0.5088,0.6031,0.079,0.079,0.062,0.086],[-0.6378,-0.7318,-0.24,0.455,0.332,0.105,0.455],[-0.3237,0.8445,-0.4267,0.157,0.146,0.071,0.157],[-0.4515,0.2058,-0.8682,0.464,0.399,0.148,0.464],[0.0656,0.4486,-0.8913,0.297,0.261,0.106,0.297],[0.2368,-0.9693,-0.0656,0.035,0.035,0.031,0.04],[0.0306,0.9991,0.0278,0.389,0.389,0.318,0.433],[-0.9382,-0.2815,-0.2014,0.261,0.261,0.191,0.278],[-0.767,-0.5575,-0.3178,0.422,0.329,0.11,0.422],[0.5002,-0.0014,-0.8659,0.163,0.163,0.131,0.18],[-0.0352,0.6432,0.7649,0.18,0.18,0.156,0.205],[0.2091,-0.6615,-0.7202,0.292,0.282,0.155,0.292],[0.8637,0.0843,-0.497,0.538,0.354,0.103,0.538],[0.4633,-0.5371,-0.7049,0.55,0.5,0.23,0.55],[-0.7433,-0.0336,-0.6681,0.55,0.546,0.321,0.55],[-0.8776,-0.4505,-0.1641,0.107,0.104,0.059,0.107],[-0.3632,0.6123,-0.7022,0.516,0.471,0.219,0.516],[-0.7655,0.6304,-0.1284,0.345,0.307,0.132,0.345],[-0.686,-0.1879,0.703,0.04,0.037,0.019,0.04],[0.5489,0.3075,-0.7773,0.137,0.1,0.032,0.137],[0.8077,-0.2415,0.5379,0.539,0.474,0.192,0.539],[0.3686,-0.8093,-0.4574,0.547,0.528,0.289,0.547],[0.1625,0.7362,0.6569,0.3,0.274,0.128,0.3],[0.5372,0.7986,-0.2713,0.041,0.039,0.021,0.041],[-0.1517,0.9229,0.3538,0.14,0.14,0.087,0.142],[-0.4673,0.7931,0.3908,0.107,0.107,0.127,0.14],[0.1361,0.977,0.1644,0.285,0.263,0.126,0.285],[-0.6789,0.6773,0.2833,0.132,0.129,0.073,0.132],[0.9393,-0.2066,-0.2738,0.415,0.327,0.11,0.415],[-0.2904,0.8823,0.3705,0.183,0.179,0.102,0.183],[-0.298,-0.8286,-0.4739,0.115,0.114,0.066,0.115],[0.5129,0.4234,0.7468,0.14,0.14,0.101,0.149],[-0.251,-0.7869,0.5637,0.359,0.359,0.285,0.395],[-0.2679,-0.9475,0.1747,0.518,0.455,0.185,0.518],[-0.7642,-0.3511,-0.541,0.39,0.39,0.262,0.405],[0.4701,-0.2385,0.8498,0.399,0.371,0.183,0.399],[-0.4864,-0.8735,0.021,0.311,0.311,0.225,0.331],[-0.0092,-0.5068,0.862,0.232,0.224,0.123,0.232],[-0.4794,0.2404,0.844,0.299,0.299,0.342,0.383],[0.2013,0.9485,-0.2448,0.388,0.277,0.086,0.388],[0.7577,-0.5983,-0.2606,0.04,0.034,0.012,0.04],[-0.3389,-0.018,-0.9406,0.433,0.43,0.255,0.433],[-0.551,0.633,0.5438,0.361,0.361,0.506,0.506],[-0.8827,0.4167,0.2171,0.366,0.366,0.295,0.405],[-0.9638,0.2667,0.0042,0.184,0.184,0.131,0.195],[0.1716,0.9814,0.086,0.307,0.307,0.342,0.342],[-0.5409,0.8408,-0.0225,0.261,0.244,0.122,0.261],[0.7899,0.0738,-0.6087,0.411,0.411,0.463,0.523],[0.1128,0.3152,-0.9423,0.202,0.102,0.021,0.202],[-0.4311,-0.2008,-0.8797,0.04,0.034,0.012,0.04],[-0.1851,-0.9789,0.0865,0.207,0.207,0.28,0.28],[-0.8851,-0.1084,-0.4526,0.13,0.129,0.076,0.13],[-0.849,0.0009,-0.5283,0.55,0.465,0.164,0.55],[0.6222,-0.7679,-0.1526,0.49,0.429,0.172,0.49],[-0.3776,-0.0893,0.9216,0.219,0.219,0.279,0.295],[-0.306,-0.3622,-0.8804,0.108,0.103,0.053,0.108],[0.5366,0.6984,0.4736,0.184,0.135,0.043,0.184],[0.029,-0.6511,0.7584,0.252,0.14,0.034,0.252],[0.8155,-0.5363,-0.2178,0.4,0.4,0.368,0.466],[0.9573,0.2282,0.1776,0.19,0.19,0.198,0.233],[-0.6987,0.4095,0.5867,0.142,0.135,0.071,0.142],[0.5362,0.744,0.3987,0.37,0.37,0.252,0.385],[-0.6295,0.1939,-0.7524,0.171,0.171,0.228,0.236],[-0.419,-0.8305,-0.367,0.504,0.36,0.112,0.504],[-0.6076,0.3869,-0.6936,0.029,0.029,0.038,0.04],[0.5906,-0.3708,0.7167,0.51,0.51,0.366,0.541],[-0.1233,-0.9808,0.1509,0.106,0.083,0.028,0.106],[-0.5494,-0.8347,0.0391,0.134,0.134,0.086,0.137],[-0.2334,-0.4503,0.8618,0.402,0.402,0.475,0.475],[0.0994,0.0995,-0.9901,0.506,0.458,0.207,0.506],[0.1199,0.6466,-0.7534,0.101,0.073,0.023,0.101],[-0.1927,0.9796,-0.0578,0.097,0.088,0.04,0.097],[0.0077,-0.4046,-0.9145,0.232,0.232,0.298,0.314],[-0.1438,0.9879,0.0579,0.436,0.317,0.1,0.436],[0.3664,0.1758,-0.9137,0.155,0.155,0.113,0.165],[0.5192,-0.5868,0.6214,0.498,0.498,0.375,0.538],[-0.5322,-0.4378,0.7246,0.382,0.382,0.237,0.386],[-0.0759,0.716,0.6939,0.151,0.151,0.153,0.183],[0.3129,0.9255,0.2133,0.046,0.03,0.008,0.046],[0.4759,0.7322,0.4873,0.165,0.162,0.094,0.165],[0.4035,0.5229,-0.7508,0.248,0.248,0.233,0.292],[-0.8543,-0.096,0.5109,0.065,0.065,0.046,0.068],[0.8333,0.0312,0.5519,0.035,0.035,0.04,0.04],[-0.0464,-0.9951,0.0879,0.153,0.103,0.031,0.153],[-0.1191,-0.0831,-0.9894,0.367,0.29,0.098,0.367],[0.1988,-0.1407,0.9699,0.418,0.375,0.166,0.418],[0.447,-0.3245,-0.8336,0.195,0.195,0.22,0.248],[-0.1765,-0.9032,-0.3913,0.123,0.118,0.064,0.123],[0.401,0.9161,0.0017,0.178,0.146,0.05,0.178],[0.2712,0.8655,0.4213,0.197,0.159,0.054,0.197],[-0.0024,-0.2563,0.9666,0.408,0.408,0.377,0.477],[-0.2645,-0.5317,-0.8046,0.169,0.151,0.065,0.169],[0.9989,-0.0464,0.0068,0.442,0.433,0.246,0.442],[0.7421,-0.3733,0.5567,0.129,0.128,0.075,0.129],[0.0135,-0.7337,-0.6793,0.49,0.485,0.283,0.49],[-0.5834,-0.1198,-0.8033,0.213,0.207,0.116,0.213],[0.5717,-0.1766,0.8013,0.08,0.073,0.034,0.08],[0.0151,0.1791,-0.9837,0.04,0.037,0.019,0.04],[-0.2735,-0.7203,0.6374,0.382,0.382,0.523,0.523],[-0.4996,-0.3967,-0.7701,0.26,0.26,0.196,0.28],[-0.0124,-0.4089,-0.9125,0.058,0.046,0.016,0.058],[0.7594,-0.0008,0.6506,0.259,0.259,0.176,0.27],[0.2253,0.9738,-0.0318,0.064,0.064,0.069,0.08],[0.4991,-0.8649,0.0525,0.516,0.516,0.372,0.549],[0.7575,0.5786,0.3025,0.159,0.159,0.198,0.212],[-0.164,-0.8351,-0.525,0.219,0.213,0.119,0.219],[-0.1588,-0.3802,0.9112,0.455,0.411,0.185,0.455],[-0.745,0.2686,0.6106,0.13,0.13,0.179,0.182],[0.8396,0.3974,0.3703,0.088,0.08,0.037,0.088],[-0.0457,0.4813,-0.8754,0.167,0.158,0.083,0.167],[-0.2221,-0.6723,-0.7061,0.273,0.251,0.12,0.273],[0.6349,0.5429,-0.5498,0.092,0.092,0.11,0.11],[0.8815,-0.0896,0.4637,0.228,0.228,0.249,0.286],[0.1353,0.0176,0.9907,0.074,0.074,0.053,0.078],[0.0342,-0.0565,0.9978,0.486,0.328,0.098,0.486],[-0.4298,-0.1675,0.8872,0.338,0.338,0.354,0.416],[0.3408,0.6087,0.7165,0.04,0.032,0.011,0.04],[-0.146,0.6897,0.7092,0.255,0.23,0.102,0.255],[-0.7153,-0.0721,-0.6951,0.29,0.277,0.148,0.29],[0.692,0.521,-0.4998,0.475,0.475,0.43,0.55],[0.3095,0.902,-0.3011,0.196,0.162,0.056,0.196],[0.7928,0.0596,0.6066,0.215,0.215,0.29,0.29],[0.1024,0.9939,0.0405,0.518,0.343,0.1,0.518],[0.5063,-0.8088,0.299,0.078,0.078,0.095,0.103],[0.8833,0.1356,0.4489,0.04,0.038,0.021,0.04],[-0.3173,0.6016,0.7331,0.151,0.129,0.046,0.151],[-0.3691,-0.4561,0.8098,0.456,0.425,0.212,0.456],[-0.36,0.9293,-0.0827,0.292,0.292,0.395,0.395],[-0.0612,-0.7602,0.6468,0.179,0.155,0.058,0.179],[0.717,0.6718,0.1857,0.397,0.397,0.519,0.519],[0.0107,-0.2885,0.9574,0.184,0.184,0.11,0.184],[0.0009,-0.0759,0.9971,0.492,0.246,0.049,0.492],[0.7485,0.6607,0.0563,0.077,0.077,0.092,0.101],[-0.6061,0.1646,-0.7782,0.107,0.087,0.03,0.107],[0.4045,0.8102,0.4243,0.382,0.306,0.104,0.382],[0.4874,0.1478,0.8606,0.346,0.32,0.156,0.346],[0.9145,0.3664,0.1714,0.449,0.414,0.2,0.449],[0.272,-0.9307,-0.2446,0.431,0.37,0.136,0.431],[-0.2753,-0.176,0.9451,0.537,0.529,0.306,0.537],[0.1995,0.7693,0.6069,0.211,0.188,0.08,0.211],[-0.6306,0.089,0.771,0.038,0.038,0.046,0.05],[0.3978,-0.3622,0.8429,0.06,0.058,0.032,0.06],[0.0838,-0.8828,-0.4622,0.269,0.244,0.111,0.269],[0.5924,-0.7997,-0.0977,0.419,0.419,0.419,0.419],[0.2229,0.8345,-0.5039,0.04,0.037,0.017,0.04],[0.2807,-0.2904,-0.9148,0.088,0.058,0.017,0.088],[0.4401,0.185,0.8787,0.173,0.162,0.083,0.173],[0.0824,0.976,0.2015,0.29,0.287,0.167,0.29],[-0.3625,-0.0191,0.9318,0.439,0.41,0.205,0.439],[0.549,0.8358,0.0024,0.497,0.388,0.129,0.497],[0.9136,-0.2088,-0.349,0.399,0.364,0.17,0.399],[0.1596,0.9375,0.3093,0.041,0.037,0.017,0.041],[0.1918,-0.5535,-0.8104,0.424,0.424,0.346,0.471],[0.6194,0.4577,0.6379,0.04,0.03,0.009,0.04],[-0.1171,0.9886,0.0949,0.509,0.509,0.55,0.55],[0.8125,-0.5582,-0.1681,0.03,0.03,0.04,0.04],[0.5527,0.4907,0.6736,0.04,0.032,0.011,0.04],[0.7709,0.4179,0.4806,0.065,0.044,0.013,0.065],[-0.8337,-0.4696,0.2905,0.425,0.41,0.224,0.425],[-0.6675,0.4652,0.5815,0.066,0.064,0.035,0.066],[-0.9692,-0.2426,0.0422,0.297,0.245,0.085,0.297],[-0.2839,-0.6747,-0.6813,0.064,0.064,0.084,0.088],[-0.2595,-0.3626,0.8951,0.529,0.476,0.212,0.529],[-0.1124,0.0941,-0.9892,0.518,0.436,0.153,0.518],[-0.8088,0.2273,-0.5425,0.55,0.487,0.204,0.55],[0.5601,-0.6858,-0.4648,0.452,0.452,0.275,0.454],[0.3384,0.3944,0.8544,0.154,0.151,0.087,0.154],[0.5469,-0.2783,0.7896,0.403,0.342,0.121,0.403],[-0.5144,0.2004,-0.8338,0.55,0.501,0.232,0.55],[0.632,0.6875,0.3575,0.344,0.296,0.111,0.344],[-0.9445,0.3221,0.0648,0.26,0.22,0.077,0.26],[-0.6778,-0.1084,0.7272,0.306,0.2,0.058,0.306],[0.1318,-0.4629,0.8766,0.141,0.141,0.086,0.142],[-0.5539,0.0829,0.8285,0.223,0.223,0.156,0.234],[-0.4735,-0.7594,-0.4462,0.473,0.248,0.054,0.473],[0.2385,-0.7476,-0.6198,0.039,0.039,0.025,0.04],[-0.0959,0.9945,0.0412,0.095,0.093,0.054,0.095],[0.4291,-0.866,-0.2568,0.344,0.209,0.055,0.344],[-0.4116,-0.4476,0.7939,0.072,0.067,0.032,0.072],[-0.9771,-0.1608,-0.1394,0.179,0.179,0.235,0.235],[-0.8238,-0.2339,0.5164,0.223,0.191,0.068,0.223],[0.6038,0.2173,0.7669,0.549,0.517,0.266,0.549],[0.7238,-0.337,-0.6021,0.145,0.096,0.028,0.145],[0.7665,0.6348,0.098,0.31,0.31,0.381,0.411],[-0.9185,0.3924,0.0484,0.075,0.051,0.015,0.075],[-0.7106,0.6516,0.2654,0.333,0.212,0.059,0.333],[-0.4767,-0.6241,-0.619,0.101,0.099,0.057,0.101],[-0.3746,0.0136,0.9271,0.075,0.075,0.085,0.085],[0.2435,-0.9421,-0.2306,0.095,0.087,0.04,0.095],[-0.5282,0.8361,0.1483,0.359,0.359,0.323,0.415],[0.4456,0.0103,-0.8952,0.501,0.413,0.143,0.501],[-0.6347,-0.6448,-0.4258,0.236,0.222,0.114,0.236],[-0.3384,-0.4299,-0.8371,0.478,0.478,0.478,0.478],[0.5956,0.2948,-0.7472,0.3,0.3,0.407,0.418],[0.5671,0.823,0.0317,0.228,0.195,0.071,0.228],[0.3125,-0.3891,-0.8666,0.204,0.197,0.108,0.204],[-0.8601,-0.247,0.4464,0.343,0.343,0.427,0.427],[0.4405,-0.2057,-0.8739,0.279,0.258,0.125,0.279],[-0.7086,-0.403,-0.5791,0.535,0.396,0.127,0.535],[0.5663,-0.4777,-0.6716,0.062,0.061,0.035,0.062],[0.2718,0.6047,-0.7486,0.166,0.166,0.153,0.194],[-0.0563,0.9949,-0.0833,0.264,0.264,0.332,0.332],[0.3286,0.4531,0.8287,0.266,0.239,0.106,0.266],[-0.4714,0.0146,-0.8818,0.091,0.091,0.091,0.091],[0.5497,-0.6377,-0.5395,0.498,0.491,0.284,0.498],[0.0627,-0.6339,-0.7709,0.38,0.255,0.075,0.38],[0.2232,-0.3374,-0.9145,0.403,0.351,0.137,0.403],[0.6585,0.1671,-0.7338,0.418,0.418,0.469,0.531],[0.7682,0.001,-0.6402,0.353,0.348,0.201,0.353],[0.4194,-0.7253,-0.546,0.338,0.311,0.15,0.338],[-0.1776,0.5579,-0.8107,0.211,0.185,0.074,0.211],[0.0909,-0.0208,-0.9956,0.521,0.4,0.132,0.521],[-0.725,0.267,-0.6349,0.04,0.04,0.024,0.04],[0.3023,-0.2538,0.9188,0.387,0.365,0.188,0.387],[0.3923,-0.6188,-0.6805,0.213,0.207,0.114,0.213],[0.3795,0.6477,0.6607,0.405,0.292,0.092,0.405],[-0.1362,0.1927,-0.9717,0.064,0.053,0.018,0.064],[0.7812,-0.2815,-0.5572,0.04,0.039,0.022,0.04],[0.8544,-0.1932,-0.4823,0.156,0.124,0.042,0.156],[-0.6336,-0.662,-0.4004,0.2,0.156,0.052,0.2],[0.6399,0.7531,0.153,0.266,0.133,0.027,0.266],[-0.4999,0.3071,-0.8098,0.177,0.145,0.05,0.177],[0.5264,0.3904,0.7553,0.33,0.33,0.332,0.399],[-0.1224,0.2113,0.9697,0.07,0.07,0.097,0.097],[0.7108,0.4375,0.5507,0.506,0.451,0.194,0.506],[0.2734,-0.474,0.837,0.456,0.414,0.19,0.456],[-0.2631,-0.4093,-0.8736,0.288,0.253,0.103,0.288],[-0.0507,-0.9945,0.0914,0.053,0.032,0.008,0.053],[0.4803,0.338,-0.8094,0.442,0.442,0.52,0.52],[0.7019,-0.4882,0.5187,0.04,0.04,0.023,0.04],[-0.2844,-0.0714,0.956,0.472,0.401,0.141,0.472],[0.2953,-0.3746,-0.8789,0.517,0.486,0.248,0.517],[0.0216,-0.9082,-0.4179,0.192,0.174,0.078,0.192],[-0.8965,0.2436,0.3699,0.106,0.089,0.031,0.106],[0.4013,-0.1984,0.8942,0.333,0.333,0.416,0.416],[0.2944,0.2977,-0.9081,0.507,0.388,0.128,0.507],[-0.1559,-0.8827,-0.4433,0.343,0.343,0.472,0.48],[0.3013,0.3568,-0.8843,0.354,0.308,0.12,0.354],[0.6647,-0.7387,-0.1119,0.336,0.289,0.106,0.336],[-0.3584,0.4091,0.8392,0.133,0.124,0.063,0.133],[-0.5262,0.0462,0.8491,0.486,0.486,0.351,0.517],[-0.5296,0.3526,0.7715,0.08,0.08,0.071,0.092],[-0.205,0.9756,-0.0787,0.204,0.163,0.056,0.204],[0.4025,0.7388,-0.5405,0.29,0.205,0.063,0.29],[0.0195,0.9403,0.3398,0.387,0.387,0.343,0.444],[0.0938,-0.0818,0.9922,0.259,0.259,0.264,0.315],[0.6173,-0.1059,-0.7796,0.282,0.282,0.18,0.287],[-0.8465,0.1143,0.5199,0.491,0.491,0.35,0.519],[-0.7704,0.2381,-0.5914,0.281,0.256,0.118,0.281],[0.9155,-0.2733,-0.2952,0.444,0.328,0.105,0.444],[-0.4968,0.4318,-0.7528,0.138,0.13,0.068,0.138],[0.1782,0.9289,-0.3247,0.273,0.227,0.079,0.273],[-0.1239,-0.9084,-0.3992,0.472,0.472,0.32,0.491],[0.7631,0.2217,0.6071,0.033,0.033,0.04,0.04],[-0.7791,-0.0859,0.621,0.162,0.137,0.048,0.162],[-0.903,0.3169,0.2902,0.286,0.25,0.099,0.286],[-0.4221,-0.9029,-0.0815,0.065,0.065,0.092,0.092],[0.6719,-0.6456,-0.363,0.154,0.146,0.077,0.154],[0.6742,-0.2252,0.7034,0.051,0.051,0.061,0.067],[0.3296,0.941,-0.0767,0.495,0.482,0.271,0.495],[-0.7822,0.4,0.4777,0.353,0.353,0.304,0.401],[-0.6454,-0.4188,-0.6387,0.18,0.18,0.187,0.187],[-0.3204,-0.3552,-0.8781,0.272,0.272,0.37,0.37],[-0.4905,-0.165,-0.8557,0.091,0.086,0.045,0.091],[-0.161,0.6946,0.7011,0.273,0.242,0.102,0.273],[-0.3842,-0.6002,-0.7015,0.479,0.459,0.246,0.479],[-0.1976,-0.4989,0.8438,0.163,0.163,0.125,0.177],[0.7622,0.6281,0.1569,0.075,0.053,0.017,0.075],[0.064,0.5686,0.8201,0.289,0.289,0.402,0.407],[-0.3096,0.9134,0.2643,0.387,0.387,0.393,0.393],[-0.2142,-0.9741,-0.0728,0.217,0.198,0.092,0.217],[0.0319,0.0932,-0.9951,0.127,0.127,0.128,0.128],[0.8885,-0.4116,-0.2028,0.181,0.169,0.085,0.181],[0.6745,0.168,0.7189,0.383,0.338,0.141,0.383],[-0.1813,-0.6904,-0.7004,0.387,0.234,0.062,0.387],[-0.7073,0.3238,-0.6284,0.244,0.21,0.078,0.244],[-0.5169,0.5681,0.6404,0.446,0.422,0.22,0.446],[-0.9852,-0.1681,-0.0318,0.445,0.409,0.194,0.445],[0.2149,-0.3362,0.9169,0.447,0.432,0.238,0.447],[0.762,0.6474,-0.0161,0.135,0.135,0.189,0.189],[-0.5539,0.809,0.1968,0.216,0.159,0.051,0.216],[-0.2393,0.8319,0.5008,0.331,0.331,0.237,0.351],[-0.5625,0.6056,0.5628,0.546,0.487,0.209,0.546],[-0.4415,0.8964,-0.0386,0.038,0.038,0.027,0.04],[-0.1658,-0.9853,-0.0403,0.188,0.174,0.085,0.188],[-0.0141,-0.6925,-0.7213,0.379,0.379,0.382,0.382],[-0.7473,-0.5447,-0.3806,0.294,0.294,0.284,0.35],[0.464,0.8561,0.2276,0.101,0.101,0.101,0.122],[-0.7486,0.3214,0.5798,0.267,0.233,0.092,0.267],[0.2927,0.0914,-0.9518,0.489,0.419,0.154,0.489],[-0.3061,0.8989,0.3134,0.254,0.244,0.132,0.254],[-0.6081,0.0251,-0.7935,0.445,0.427,0.231,0.445],[0.4018,-0.6113,-0.6818,0.114,0.09,0.03,0.114],[0.137,0.9886,-0.062,0.215,0.215,0.257,0.257],[-0.1267,-0.8653,0.485,0.124,0.124,0.138,0.157],[0.6583,0.3109,0.6855,0.217,0.209,0.113,0.217],[0.7538,-0.3644,-0.5468,0.203,0.203,0.154,0.219],[-0.8821,-0.271,-0.3853,0.327,0.252,0.083,0.327],[0.8612,-0.5076,0.0262,0.135,0.135,0.149,0.149],[0.588,0.4659,0.6611,0.307,0.263,0.097,0.307],[-0.5816,-0.3891,0.7144,0.384,0.384,0.471,0.471],[0.438,-0.72,-0.5383,0.296,0.296,0.42,0.421],[0.4016,-0.8471,-0.3481,0.542,0.542,0.341,0.55],[-0.8547,-0.1897,-0.4832,0.054,0.052,0.029,0.054],[0.1519,-0.2684,-0.9513,0.13,0.128,0.074,0.13],[0.5043,0.0283,0.8631,0.381,0.381,0.399,0.469],[0.891,-0.2611,0.3714,0.453,0.386,0.137,0.453],[-0.9779,-0.0907,0.1886,0.036,0.036,0.029,0.04],[-0.4098,0.4075,0.8161,0.097,0.089,0.041,0.097],[-0.7287,-0.6523,-0.2085,0.311,0.311,0.286,0.363],[0.8345,0.0327,-0.5501,0.054,0.054,0.074,0.076],[-0.7932,0.0037,-0.609,0.477,0.456,0.244,0.477],[0.8478,0.287,0.4461,0.349,0.349,0.433,0.465],[-0.9924,-0.0424,0.1158,0.479,0.373,0.124,0.479],[0.1482,-0.9551,-0.2565,0.244,0.209,0.077,0.244],[0.9597,0.1445,0.2412,0.424,0.331,0.11,0.424],[0.1703,0.9165,0.3621,0.249,0.178,0.055,0.249],[-0.4746,-0.4331,-0.7663,0.315,0.297,0.152,0.315],[0.6778,0.7346,-0.0308,0.076,0.076,0.097,0.097],[0.3305,-0.6362,-0.6971,0.313,0.313,0.396,0.42],[-0.1533,-0.3147,-0.9367,0.234,0.223,0.118,0.234],[-0.6246,-0.7009,0.3444,0.3,0.245,0.084,0.3],[-0.291,-0.9219,-0.2557,0.284,0.239,0.084,0.284],[0.6683,0.2069,0.7146,0.059,0.05,0.018,0.059],[0.1485,0.2985,-0.9428,0.36,0.282,0.094,0.36],[0.1024,0.6046,0.7899,0.354,0.325,0.156,0.354],[0.5703,-0.4335,-0.6978,0.338,0.298,0.123,0.338],[0.2422,0.156,-0.9576,0.55,0.404,0.129,0.55],[-0.5231,0.3755,-0.7651,0.364,0.309,0.109,0.364],[-0.0161,0.71,0.7041,0.362,0.283,0.094,0.362],[-0.1491,0.3612,0.9205,0.335,0.313,0.157,0.335],[-0.6814,0.1098,0.7236,0.287,0.287,0.384,0.396],[-0.5094,0.411,0.7561,0.066,0.066,0.073,0.083],[-0.866,0.3986,0.302,0.347,0.347,0.449,0.449],[-0.7676,-0.3231,0.5536,0.173,0.172,0.102,0.173],[0.1415,-0.9894,-0.032,0.434,0.434,0.365,0.488],[0.886,-0.1292,-0.4454,0.445,0.415,0.208,0.445],[-0.1849,0.9689,0.1644,0.274,0.26,0.137,0.274],[-0.2343,0.1949,-0.9524,0.088,0.088,0.082,0.103],[0.2837,0.3138,0.9061,0.331,0.331,0.348,0.408],[0.1807,-0.9279,0.3262,0.55,0.365,0.107,0.55],[0.1772,-0.2937,-0.9393,0.237,0.118,0.024,0.237],[-0.8751,0.4739,-0.098,0.488,0.488,0.355,0.52],[0.8201,-0.3038,-0.4849,0.413,0.276,0.081,0.413],[-0.6214,-0.6109,-0.4906,0.243,0.238,0.136,0.243],[-0.955,0.1737,0.2406,0.505,0.41,0.14,0.505],[0.1169,-0.3685,0.9222,0.276,0.182,0.053,0.276],[0.449,0.8628,0.2324,0.369,0.352,0.187,0.369],[0.6985,-0.4618,-0.5466,0.181,0.148,0.051,0.181],[0.2744,0.4709,0.8385,0.395,0.395,0.35,0.453],[0.2532,-0.5006,0.8278,0.482,0.329,0.098,0.482],[-0.4248,0.3268,-0.8442,0.135,0.1,0.032,0.135],[-0.3888,-0.9155,-0.1037,0.217,0.217,0.217,0.217],[0.776,-0.4395,-0.4524,0.242,0.23,0.12,0.242],[0.7552,0.5985,0.2673,0.199,0.199,0.241,0.262],[-0.2958,-0.6504,-0.6996,0.172,0.168,0.094,0.172],[-0.8967,0.3784,0.2298,0.373,0.373,0.374,0.451],[-0.6658,-0.4806,-0.5707,0.406,0.406,0.302,0.436],[-0.9583,0.2262,0.1744,0.286,0.261,0.122,0.286],[-0.4904,0.7087,0.5073,0.469,0.34,0.108,0.469],[0.6714,0.1518,0.7253,0.514,0.506,0.292,0.514],[-0.8845,-0.2382,0.4012,0.04,0.034,0.013,0.04],[0.467,0.6113,0.6389,0.286,0.186,0.053,0.286],[-0.9162,0.1357,-0.3771,0.177,0.173,0.098,0.177],[0.7238,0.6276,0.2868,0.17,0.17,0.183,0.212],[-0.6374,0.1207,0.761,0.424,0.394,0.193,0.424],[0.3116,0.1518,0.938,0.472,0.445,0.23,0.472],[-0.4639,-0.025,-0.8855,0.049,0.049,0.056,0.063],[-0.6633,-0.427,0.6146,0.476,0.438,0.211,0.476],[-0.6717,0.1433,-0.7268,0.427,0.427,0.456,0.531],[0.4408,-0.5436,0.7143,0.405,0.402,0.238,0.405],[-0.1323,-0.1102,0.9851,0.364,0.269,0.086,0.364],[-0.3118,0.9311,-0.1895,0.466,0.331,0.103,0.466],[-0.2485,0.8809,-0.4029,0.476,0.445,0.224,0.476],[0.9652,-0.206,0.1614,0.421,0.357,0.126,0.421],[0.6953,-0.3813,-0.6093,0.409,0.318,0.106,0.409],[-0.4731,-0.7374,-0.482,0.414,0.414,0.512,0.55],[-0.4546,-0.0477,0.8894,0.233,0.233,0.263,0.263],[-0.1395,-0.1103,0.9841,0.173,0.152,0.062,0.173],[-0.6542,0.2717,-0.7059,0.272,0.212,0.071,0.272],[-0.5915,-0.3807,-0.7107,0.263,0.241,0.113,0.263],[-0.5832,-0.4804,0.655,0.415,0.415,0.51,0.55],[0.2868,0.6959,-0.6584,0.303,0.181,0.047,0.303],[0.944,-0.0459,-0.3268,0.325,0.31,0.164,0.325],[-0.2247,-0.5376,0.8127,0.262,0.262,0.342,0.358],[-0.6356,-0.474,0.6093,0.435,0.377,0.147,0.435],[-0.1889,0.4859,0.8534,0.335,0.306,0.142,0.335],[-0.2368,0.2738,0.9322,0.378,0.378,0.3,0.416],[-0.5601,-0.6244,-0.5445,0.474,0.474,0.418,0.543],[-0.3022,0.5989,0.7416,0.306,0.304,0.178,0.306],[0.2421,-0.3395,-0.9089,0.04,0.028,0.009,0.04],[0.8995,-0.0597,0.4329,0.091,0.08,0.033,0.091],[0.3093,0.6565,-0.688,0.132,0.128,0.071,0.132],[-0.824,0.4752,0.3086,0.308,0.212,0.064,0.308],[0.1314,0.0423,-0.9904,0.287,0.287,0.2,0.301],[-0.4281,0.2583,0.866,0.033,0.033,0.033,0.04],[-0.8623,-0.4934,-0.114,0.458,0.332,0.104,0.458],[0.4437,-0.4478,0.7763,0.089,0.089,0.12,0.12],[0.4005,-0.916,0.0225,0.247,0.247,0.251,0.3],[0.6167,-0.6846,0.3886,0.195,0.195,0.161,0.218],[0.0997,0.9939,-0.0462,0.415,0.415,0.485,0.537],[0.1709,-0.7483,-0.6409,0.028,0.028,0.04,0.04],[0.2059,0.5134,-0.8331,0.321,0.285,0.122,0.321],[0.3693,-0.3047,0.8779,0.414,0.306,0.098,0.414],[0.2736,0.8289,-0.4878,0.48,0.48,0.294,0.483],[-0.036,-0.9986,0.0398,0.355,0.304,0.112,0.355],[0.0631,0.442,0.8948,0.206,0.206,0.235,0.263],[-0.3969,-0.7791,-0.4853,0.533,0.454,0.161,0.533],[0.3428,-0.7405,-0.5781,0.421,0.421,0.32,0.456],[-0.2628,-0.4881,-0.8323,0.225,0.217,0.119,0.225],[0.4599,0.8604,0.2195,0.291,0.268,0.13,0.291],[0.1505,-0.8786,-0.4532,0.039,0.039,0.025,0.04],[-0.0392,-0.9187,0.393,0.398,0.227,0.056,0.398],[0.7317,0.4503,0.5116,0.37,0.37,0.402,0.463],[-0.8529,-0.5025,-0.1416,0.469,0.455,0.254,0.469],[0.7573,0.2772,0.5913,0.232,0.232,0.289,0.309],[-0.3266,0.7656,-0.5542,0.393,0.393,0.382,0.468],[0.0431,0.9969,0.0663,0.37,0.33,0.141,0.37],[-0.0732,0.9829,0.1688,0.359,0.343,0.184,0.359],[-0.1475,0.2168,-0.965,0.334,0.334,0.424,0.449],[-0.2585,-0.5562,0.7898,0.099,0.099,0.065,0.102],[0.9306,-0.2887,0.2249,0.302,0.302,0.296,0.362],[-0.7353,-0.534,-0.4173,0.481,0.481,0.519,0.519],[-0.0883,0.4472,-0.8901,0.473,0.359,0.117,0.473],[0.4237,0.3792,-0.8226,0.045,0.045,0.042,0.053],[-0.119,0.1526,-0.9811,0.495,0.495,0.383,0.539],[0.1247,-0.3041,-0.9444,0.333,0.251,0.081,0.333],[0.1388,0.3056,0.942,0.445,0.445,0.55,0.55],[0.1666,-0.235,-0.9576,0.49,0.49,0.406,0.548],[-0.8295,-0.5584,-0.0125,0.153,0.152,0.089,0.153],[-0.7773,-0.1088,0.6197,0.283,0.268,0.141,0.283],[-0.5335,-0.7356,0.4175,0.245,0.208,0.073,0.245],[0.9328,-0.2016,0.2986,0.285,0.273,0.147,0.285],[0.6572,0.1186,0.7443,0.179,0.179,0.145,0.199],[0.3232,0.232,0.9175,0.431,0.309,0.097,0.431],[-0.2357,0.8483,0.4742,0.188,0.161,0.059,0.188],[-0.845,-0.3034,0.4404,0.232,0.196,0.069,0.232],[-0.6014,0.5155,0.6104,0.507,0.482,0.254,0.507],[0.4146,0.8979,0.1479,0.075,0.072,0.039,0.075],[-0.2175,-0.7774,-0.5901,0.55,0.546,0.322,0.55],[0.254,0.076,0.9642,0.272,0.267,0.152,0.272],[-0.0877,-0.7173,-0.6912,0.55,0.434,0.146,0.55],[-0.8194,0.3271,-0.4708,0.449,0.449,0.318,0.474],[-0.3308,-0.8938,-0.3028,0.55,0.379,0.114,0.55],[0.18,-0.9618,-0.206,0.2,0.191,0.101,0.2],[0.5925,-0.8008,-0.0877,0.076,0.062,0.022,0.076],[-0.7636,-0.6272,-0.1534,0.31,0.292,0.15,0.31],[0.0164,0.0588,0.9981,0.347,0.341,0.197,0.347],[0.5251,-0.3064,0.794,0.214,0.2,0.1,0.214],[0.5998,0.6297,-0.4937,0.254,0.129,0.027,0.254],[-0.5908,-0.5451,-0.5947,0.484,0.297,0.08,0.484],[-0.4761,0.0845,0.8753,0.462,0.462,0.335,0.492],[-0.2779,0.0476,-0.9594,0.04,0.035,0.015,0.04],[0.5033,0.8342,-0.2252,0.253,0.249,0.143,0.253],[0.6127,-0.7632,-0.2051,0.068,0.068,0.042,0.069],[0.7187,-0.1719,-0.6738,0.281,0.281,0.318,0.318],[0.1123,-0.7865,-0.6073,0.119,0.119,0.103,0.136],[-0.7692,-0.5382,-0.3446,0.162,0.162,0.129,0.179],[-0.5873,0.3763,0.7166,0.204,0.204,0.284,0.284],[-0.4987,0.7043,0.5053,0.38,0.38,0.446,0.493],[0.1233,-0.9355,0.331,0.324,0.324,0.417,0.417],[0.8545,0.5156,-0.0632,0.042,0.035,0.012,0.042],[0.6761,0.7343,-0.0612,0.325,0.325,0.313,0.386],[-0.3753,0.223,0.8997,0.232,0.218,0.112,0.232],[-0.7218,0.654,0.2265,0.03,0.03,0.037,0.04],[-0.0924,0.1154,-0.989,0.211,0.208,0.121,0.211],[0.4672,-0.0773,-0.8808,0.221,0.175,0.059,0.221],[0.4708,0.6598,0.5857,0.158,0.144,0.066,0.158],[0.629,0.5575,0.5418,0.174,0.151,0.058,0.174],[0.2962,-0.0906,0.9508,0.176,0.15,0.054,0.176],[0.6721,0.593,-0.4435,0.4,0.4,0.446,0.506],[0.9222,-0.2426,-0.3012,0.132,0.123,0.06,0.132],[0.8445,0.131,-0.5193,0.486,0.44,0.2,0.486],[-0.2331,-0.1608,-0.9591,0.122,0.122,0.093,0.132],[-0.9129,0.2529,0.3205,0.496,0.451,0.207,0.496],[-0.0195,-0.0827,0.9964,0.261,0.197,0.064,0.261],[0.6431,0.7654,0.0232,0.177,0.177,0.218,0.235],[0.8603,0.2002,0.4688,0.259,0.245,0.128,0.259],[-0.7251,0.1151,-0.6789,0.543,0.455,0.159,0.543],[0.6878,0.7077,0.1616,0.093,0.073,0.024,0.093],[-0.1622,0.8408,0.5165,0.333,0.291,0.115,0.333],[0.4386,-0.0893,0.8942,0.04,0.03,0.01,0.04],[0.7635,-0.4014,0.5059,0.355,0.292,0.101,0.355],[-0.8647,-0.4143,-0.2838,0.175,0.158,0.071,0.175],[-0.1526,0.0541,0.9868,0.165,0.165,0.116,0.174],[-0.1227,0.258,-0.9583,0.285,0.285,0.19,0.295],[-0.721,-0.367,-0.5877,0.039,0.039,0.026,0.04],[0.416,0.2188,0.8827,0.04,0.036,0.017,0.04],[0.306,-0.952,0.003,0.504,0.408,0.139,0.504],[-0.1373,-0.9774,-0.1607,0.328,0.328,0.41,0.41],[0.2307,-0.3845,-0.8939,0.386,0.28,0.088,0.386],[-0.4853,0.4488,0.7504,0.55,0.529,0.287,0.55],[0.4238,-0.339,0.8399,0.187,0.135,0.042,0.187],[-0.6092,-0.037,-0.7921,0.049,0.049,0.054,0.062],[-0.0346,0.6702,-0.7414,0.143,0.143,0.113,0.157],[0.2407,0.371,0.8969,0.064,0.051,0.017,0.064],[-0.208,0.9392,0.2731,0.55,0.41,0.132,0.55],[0.543,0.142,-0.8277,0.231,0.229,0.135,0.231],[-0.4133,0.9015,0.1288,0.399,0.302,0.098,0.399],[0.0977,0.8267,-0.5541,0.296,0.234,0.079,0.296],[-0.8253,0.5511,-0.1234,0.073,0.059,0.02,0.073],[-0.3015,-0.7346,-0.6079,0.309,0.309,0.309,0.309],[-0.226,0.0447,-0.9731,0.036,0.036,0.029,0.04],[0.8522,-0.0662,0.5191,0.196,0.196,0.274,0.274],[-0.5017,-0.375,-0.7795,0.393,0.341,0.131,0.393],[0.316,-0.4467,0.837,0.286,0.286,0.237,0.319],[0.5268,-0.7014,0.4802,0.185,0.185,0.17,0.215],[-0.5492,-0.363,0.7527,0.169,0.165,0.094,0.169],[-0.1785,-0.5103,0.8412,0.196,0.196,0.166,0.221],[0.683,-0.0585,0.728,0.511,0.424,0.147,0.511],[0.9331,-0.1471,0.328,0.195,0.195,0.231,0.231],[-0.3042,0.2326,-0.9238,0.078,0.078,0.098,0.104],[-0.2171,0.3417,-0.9144,0.04,0.039,0.021,0.04],[0.5275,0.6257,0.5746,0.22,0.22,0.294,0.304],[-0.8935,0.369,0.256,0.305,0.293,0.157,0.305],[0.6249,0.2339,-0.7449,0.347,0.3,0.114,0.347],[-0.2938,0.3304,-0.897,0.066,0.066,0.041,0.067],[0.11,0.2089,-0.9717,0.513,0.492,0.266,0.513],[0.3314,0.5935,-0.7334,0.2,0.185,0.089,0.2],[-0.7998,-0.1731,0.5748,0.182,0.182,0.257,0.258],[0.9596,-0.2324,-0.1588,0.085,0.085,0.106,0.106],[-0.7518,0.5747,0.3234,0.339,0.339,0.392,0.436],[-0.2797,-0.8442,-0.4572,0.183,0.183,0.243,0.243],[0.4895,-0.8608,-0.1393,0.106,0.101,0.054,0.106],[0.1297,-0.2422,-0.9615,0.194,0.139,0.044,0.194],[0.449,0.8065,-0.3846,0.488,0.398,0.137,0.488],[0.5906,0.0625,0.8045,0.241,0.216,0.094,0.241],[-0.4023,0.1406,0.9047,0.397,0.294,0.094,0.397],[0.634,-0.4116,0.6547,0.258,0.189,0.06,0.258],[0.4127,-0.2815,-0.8663,0.077,0.069,0.03,0.077],[0.0847,0.4044,0.9106,0.328,0.328,0.316,0.39],[-0.3955,0.849,0.3505,0.483,0.421,0.166,0.483],[0.9403,0.3401,-0.015,0.53,0.377,0.117,0.53],[-0.9885,-0.1265,0.0828,0.204,0.193,0.101,0.204],[-0.9104,-0.2894,0.2955,0.201,0.201,0.226,0.226],[0.0832,0.0035,0.9965,0.204,0.204,0.229,0.259],[-0.1957,0.9565,0.2165,0.169,0.141,0.049,0.169],[-0.255,-0.7158,-0.65,0.04,0.034,0.013,0.04],[0.8256,0.5577,-0.085,0.063,0.052,0.018,0.063],[-0.0204,0.9208,-0.3895,0.209,0.184,0.076,0.209],[0.2759,-0.375,-0.885,0.375,0.353,0.18,0.375],[0.7782,0.5964,-0.1968,0.032,0.032,0.042,0.044],[-0.0032,0.4539,-0.891,0.472,0.472,0.408,0.536],[0.1852,0.9807,0.0623,0.215,0.205,0.109,0.215],[-0.1181,-0.7349,0.6678,0.081,0.073,0.032,0.081],[0.4484,0.1835,0.8748,0.316,0.305,0.167,0.316],[0.3123,-0.4775,-0.8212,0.294,0.259,0.105,0.294],[-0.3063,-0.8312,0.464,0.038,0.038,0.04,0.04],[0.5665,-0.0081,0.824,0.131,0.126,0.068,0.131],[-0.5296,-0.5783,-0.6206,0.374,0.3,0.102,0.374],[-0.5385,0.511,-0.6701,0.407,0.407,0.377,0.476],[-0.0209,0.5049,-0.863,0.354,0.317,0.138,0.354],[-0.275,-0.0508,-0.9601,0.074,0.044,0.011,0.074],[0.5315,0.8354,0.1401,0.04,0.038,0.02,0.04],[-0.499,0.8361,0.228,0.38,0.371,0.211,0.38],[-0.5519,-0.2177,-0.805,0.143,0.129,0.058,0.143],[-0.0968,0.1774,-0.9794,0.375,0.375,0.232,0.379],[-0.8967,0.3456,-0.2766,0.456,0.456,0.389,0.516],[0.7897,-0.1081,0.6039,0.41,0.393,0.212,0.41],[0.4025,0.877,0.2624,0.094,0.088,0.045,0.094],[0.915,0.2762,-0.2942,0.082,0.067,0.023,0.082],[-0.2913,-0.4933,-0.8196,0.04,0.032,0.011,0.04],[0.744,0.5542,0.3732,0.381,0.223,0.056,0.381],[-0.0914,-0.1189,0.9887,0.041,0.034,0.012,0.041],[-0.5891,-0.6431,-0.4892,0.489,0.468,0.252,0.489],[-0.3508,0.8252,-0.4427,0.451,0.451,0.423,0.53],[-0.7811,-0.4988,-0.3756,0.059,0.05,0.017,0.059],[0.8616,0.3292,-0.3864,0.171,0.135,0.045,0.171],[0.8165,0.1493,-0.5577,0.03,0.03,0.038,0.04],[0.4182,0.9083,0.0087,0.296,0.284,0.154,0.296],[-0.4496,0.8701,-0.2021,0.13,0.13,0.178,0.182],[0.5552,-0.8187,-0.1469,0.04,0.034,0.012,0.04],[0.8303,0.2656,0.49,0.491,0.436,0.183,0.491],[-0.8341,-0.0215,-0.5512,0.263,0.191,0.061,0.263],[-0.354,0.0679,0.9328,0.315,0.292,0.144,0.315],[0.7676,0.5756,0.2821,0.504,0.489,0.273,0.504],[0.3309,0.3346,-0.8823,0.184,0.167,0.077,0.184],[-0.4632,0.8496,-0.2522,0.461,0.461,0.334,0.491],[-0.5672,-0.0576,-0.8216,0.545,0.542,0.321,0.545],[0.785,-0.0057,0.6195,0.405,0.405,0.321,0.445],[0.3318,-0.1476,-0.9317,0.038,0.038,0.027,0.04],[0.977,0.1519,-0.1494,0.077,0.077,0.078,0.093],[0.2271,0.5285,-0.818,0.38,0.346,0.159,0.38],[-0.7921,0.3926,0.4674,0.321,0.293,0.137,0.321],[0.3529,-0.9186,-0.1779,0.065,0.065,0.087,0.087],[0.9948,-0.0261,0.098,0.339,0.339,0.455,0.469],[0.8072,0.3035,0.5062,0.334,0.293,0.119,0.334],[-0.2867,-0.5877,-0.7566,0.233,0.233,0.273,0.273],[-0.4102,0.8762,0.253,0.55,0.492,0.214,0.55],[0.8484,-0.5287,0.0244,0.268,0.216,0.073,0.268],[0.1614,0.5407,0.8256,0.413,0.363,0.147,0.413],[-0.1954,-0.9138,-0.3562,0.409,0.285,0.087,0.409],[0.2211,-0.0299,-0.9748,0.059,0.059,0.037,0.06],[0.1698,-0.3477,-0.9221,0.112,0.112,0.15,0.15],[0.6625,-0.2489,-0.7065,0.302,0.302,0.302,0.302],[0.3172,0.8558,0.4087,0.35,0.329,0.167,0.35],[0.588,0.4396,0.6789,0.04,0.038,0.02,0.04],[-0.1682,-0.8807,-0.4428,0.085,0.076,0.033,0.085],[0.1641,0.9403,0.2983,0.522,0.45,0.169,0.522],[-0.1104,0.4724,-0.8745,0.303,0.303,0.339,0.384],[-0.5454,0.7836,-0.2974,0.244,0.122,0.024,0.244],[0.9668,-0.0587,0.2486,0.268,0.256,0.138,0.268],[0.0592,0.117,0.9914,0.153,0.137,0.059,0.153],[-0.2711,0.2953,0.9161,0.297,0.296,0.175,0.297],[-0.3086,0.4066,0.8599,0.144,0.115,0.039,0.144],[-0.6847,-0.0714,0.7253,0.08,0.075,0.039,0.08],[0.5572,0.7869,0.2652,0.466,0.466,0.442,0.55],[0.5659,0.7617,0.3156,0.54,0.495,0.234,0.54],[0.8823,0.3493,-0.3156,0.308,0.308,0.29,0.363],[0.4494,0.1176,0.8856,0.144,0.144,0.13,0.166],[0.0762,0.9625,0.2604,0.507,0.507,0.507,0.507],[-0.347,0.9182,-0.1911,0.146,0.134,0.065,0.146],[0.1469,-0.2946,0.9443,0.183,0.179,0.102,0.183],[-0.563,-0.0275,0.826,0.501,0.459,0.217,0.501],[-0.2333,0.3566,-0.9046,0.298,0.298,0.404,0.404],[0.7406,0.6176,-0.2647,0.044,0.044,0.062,0.062],[0.6012,-0.7813,-0.168,0.173,0.173,0.173,0.173],[-0.6542,-0.7359,-0.1743,0.318,0.306,0.167,0.318],[-0.5585,-0.417,-0.7171,0.073,0.068,0.034,0.073],[-0.6049,-0.1766,-0.7765,0.202,0.115,0.028,0.202],[-0.4532,0.1867,0.8716,0.074,0.074,0.076,0.09],[0.5509,0.5787,0.6013,0.423,0.392,0.192,0.423],[-0.3355,0.9414,0.0333,0.468,0.468,0.428,0.544],[0.2657,0.8483,0.4581,0.408,0.341,0.119,0.408],[0.4854,-0.5242,0.6998,0.39,0.347,0.147,0.39],[0.3969,0.125,0.9093,0.39,0.346,0.146,0.39],[-0.5378,-0.2542,0.8038,0.404,0.404,0.386,0.479],[-0.8255,-0.0012,0.5644,0.31,0.191,0.052,0.31],[-0.0558,-0.9914,0.1183,0.033,0.033,0.033,0.04],[-0.6337,-0.7058,-0.3165,0.053,0.04,0.013,0.053],[-0.8651,0.3783,0.3294,0.057,0.048,0.017,0.057],[-0.3499,-0.1967,0.9159,0.317,0.26,0.09,0.317],[0.0854,0.8713,0.4832,0.409,0.409,0.518,0.55],[-0.2672,-0.8252,-0.4976,0.452,0.452,0.287,0.46],[-0.4038,0.2102,0.8904,0.05,0.05,0.035,0.052],[0.586,-0.2607,-0.7672,0.409,0.37,0.168,0.409],[-0.1763,0.955,0.2383,0.521,0.517,0.305,0.521],[0.7936,0.6074,-0.0369,0.082,0.082,0.105,0.111],[0.9712,-0.1523,-0.183,0.236,0.208,0.086,0.236],[-0.6694,0.7351,0.1077,0.04,0.037,0.017,0.04],[0.0218,-0.8231,-0.5675,0.036,0.036,0.047,0.049],[-0.2126,0.5105,-0.8332,0.465,0.406,0.16,0.465],[-0.7322,0.1077,0.6725,0.099,0.09,0.041,0.099],[-0.9289,-0.0731,-0.3629,0.462,0.462,0.447,0.55],[-0.0326,0.9121,0.4088,0.211,0.211,0.301,0.301],[-0.8674,-0.0162,0.4973,0.389,0.389,0.432,0.432],[0.6551,-0.4456,0.6102,0.105,0.105,0.141,0.145],[0.6544,0.256,-0.7115,0.152,0.152,0.135,0.175],[0.7305,0.0251,0.6824,0.088,0.083,0.043,0.088],[-0.2772,0.7566,0.5922,0.478,0.443,0.216,0.478],[-0.1401,-0.161,0.977,0.356,0.356,0.236,0.368],[0.7152,0.5053,0.4829,0.073,0.057,0.019,0.073],[0.4312,0.3699,-0.8229,0.18,0.179,0.106,0.18],[-0.6683,0.6466,-0.3677,0.258,0.258,0.189,0.275],[-0.6979,-0.0302,0.7155,0.051,0.046,0.02,0.051],[0.4889,0.0513,-0.8708,0.257,0.235,0.112,0.257],[0.0252,-0.7721,-0.635,0.528,0.435,0.15,0.528],[0.7546,0.1953,-0.6264,0.376,0.376,0.376,0.376],[-0.0833,-0.9425,-0.3237,0.444,0.408,0.194,0.444],[0.0971,-0.7493,0.6551,0.49,0.49,0.365,0.527],[-0.299,0.5681,-0.7667,0.129,0.125,0.069,0.129],[0.6313,0.5861,0.5079,0.522,0.522,0.343,0.538],[0.6378,-0.494,0.5909,0.19,0.183,0.1,0.19],[0.7083,-0.5892,-0.3888,0.421,0.421,0.466,0.466],[0.9037,-0.3043,-0.3012,0.285,0.281,0.163,0.285],[-0.5404,-0.8018,-0.2552,0.461,0.461,0.448,0.55],[0.162,-0.6169,0.7702,0.056,0.056,0.056,0.056],[-0.6574,0.1788,0.732,0.035,0.035,0.031,0.04],[0.4028,-0.2904,0.868,0.449,0.431,0.233,0.449],[0.6552,-0.7528,-0.0635,0.494,0.443,0.195,0.494],[0.0703,0.4095,-0.9096,0.543,0.543,0.336,0.548],[-0.2054,0.2008,0.9579,0.04,0.036,0.016,0.04],[-0.9332,0.1078,0.3429,0.083,0.078,0.041,0.083],[0.5408,-0.0486,-0.8398,0.469,0.43,0.204,0.469],[0.9998,-0.0167,-0.008,0.318,0.318,0.196,0.321],[0.6086,-0.1988,0.7682,0.49,0.49,0.34,0.513],[0.2625,0.9557,-0.1331,0.034,0.034,0.032,0.04],[-0.1612,0.427,0.8898,0.415,0.328,0.11,0.415],[0.2352,0.2877,-0.9284,0.245,0.245,0.253,0.3],[-0.8927,-0.4422,0.087,0.375,0.375,0.328,0.428],[-0.9663,0.2567,0.0166,0.515,0.472,0.223,0.515],[0.5565,0.2439,0.7943,0.528,0.502,0.266,0.528],[0.0085,0.5351,-0.8447,0.4,0.4,0.348,0.456],[-0.0696,-0.3128,0.9473,0.198,0.198,0.237,0.259],[0.3344,-0.9368,-0.1027,0.042,0.042,0.038,0.049],[-0.7107,-0.0807,0.6989,0.253,0.224,0.093,0.253],[0.5875,-0.3939,-0.7069,0.291,0.234,0.08,0.291],[-0.3908,0.1444,-0.9091,0.083,0.065,0.022,0.083],[-0.7091,-0.2945,-0.6407,0.388,0.359,0.175,0.388],[0.4952,-0.3022,-0.8145,0.55,0.529,0.288,0.55],[0.7357,-0.3175,-0.5983,0.331,0.331,0.282,0.374],[-0.4569,-0.5048,-0.7324,0.233,0.2,0.075,0.233],[0.4184,-0.869,-0.2641,0.379,0.316,0.11,0.379],[-0.6663,0.7267,0.167,0.056,0.054,0.029,0.056],[-0.0959,0.3919,0.915,0.034,0.034,0.032,0.04],[-0.7069,0.6167,-0.3465,0.186,0.161,0.062,0.186],[-0.5143,0.0055,0.8576,0.319,0.319,0.304,0.377],[0.5365,0.0717,-0.8409,0.474,0.474,0.42,0.544],[0.9803,-0.1959,-0.0232,0.147,0.104,0.032,0.147],[0.7827,-0.3263,0.53,0.114,0.092,0.031,0.114],[-0.254,0.6083,0.752,0.263,0.243,0.117,0.263],[-0.7042,-0.0935,-0.7038,0.468,0.384,0.133,0.468],[0.0881,0.9242,0.3715,0.304,0.241,0.081,0.304],[-0.6986,0.0445,-0.7142,0.447,0.447,0.346,0.487],[0.5437,0.3706,0.753,0.266,0.266,0.269,0.323],[-0.5307,-0.4871,-0.6936,0.34,0.234,0.071,0.34],[0.5955,-0.6162,0.5155,0.071,0.071,0.099,0.099],[-0.8799,0.2938,0.3734,0.48,0.445,0.218,0.48],[0.318,0.705,0.6339,0.294,0.19,0.054,0.294],[0.8461,0.2032,0.4927,0.057,0.053,0.026,0.057],[-0.8024,-0.2731,0.5306,0.04,0.039,0.023,0.04],[0.6736,0.469,0.5712,0.245,0.245,0.201,0.273],[0.6374,-0.5238,-0.5651,0.096,0.096,0.085,0.11],[-0.6686,0.4967,0.5534,0.33,0.259,0.087,0.33],[-0.0266,0.179,0.9835,0.357,0.302,0.106,0.357],[-0.8261,0.3655,0.4289,0.067,0.067,0.043,0.069],[0.8873,-0.274,-0.371,0.102,0.055,0.012,0.102],[-0.2972,0.5776,-0.7603,0.256,0.235,0.112,0.256],[-0.1452,0.917,0.3716,0.107,0.079,0.025,0.107],[0.6102,-0.2231,-0.7602,0.347,0.259,0.083,0.347],[0.864,-0.4889,-0.1202,0.101,0.097,0.053,0.101],[0.1031,-0.1874,-0.9769,0.076,0.066,0.026,0.076],[0.4136,0.397,-0.8194,0.296,0.296,0.37,0.37],[-0.0763,-0.0935,-0.9927,0.396,0.396,0.519,0.542],[-0.608,0.2603,-0.7501,0.354,0.354,0.482,0.494],[-0.2142,-0.8355,0.506,0.276,0.234,0.082,0.276],[-0.3185,0.5853,-0.7457,0.298,0.292,0.167,0.298],[0.6237,-0.551,-0.5544,0.036,0.036,0.036,0.044],[-0.5828,0.2533,-0.7722,0.04,0.036,0.016,0.04],[0.4789,-0.1979,0.8553,0.423,0.31,0.098,0.423],[0.8174,-0.2642,0.512,0.161,0.161,0.161,0.161],[-0.8984,0.3472,0.2689,0.164,0.137,0.048,0.164],[0.2518,0.7239,0.6423,0.367,0.367,0.297,0.407],[-0.4358,-0.1633,-0.8851,0.488,0.472,0.261,0.488],[-0.2197,-0.4764,0.8513,0.04,0.04,0.05,0.053],[-0.1952,-0.9794,0.0525,0.387,0.308,0.104,0.387],[-0.325,0.3737,-0.8687,0.167,0.163,0.093,0.167],[0.3885,-0.8825,0.265,0.363,0.363,0.361,0.437],[-0.7079,0.4965,-0.5024,0.373,0.373,0.328,0.426],[-0.7677,-0.4794,-0.4251,0.035,0.035,0.03,0.04],[0.4872,-0.7362,-0.4698,0.268,0.248,0.12,0.268],[-0.6466,0.5231,-0.5553,0.393,0.358,0.166,0.393],[0.726,-0.3689,-0.5804,0.135,0.107,0.036,0.135],[-0.441,0.5964,-0.6706,0.487,0.346,0.107,0.487],[0.0469,-0.9283,0.3689,0.168,0.168,0.168,0.168],[0.355,-0.9184,-0.1747,0.166,0.128,0.042,0.166],[0.491,0.0175,0.871,0.045,0.045,0.061,0.062],[0.7474,0.5365,0.3918,0.055,0.055,0.051,0.064],[0.6548,0.6614,0.3657,0.312,0.238,0.078,0.312],[0.3422,0.9395,0.0125,0.038,0.038,0.027,0.04],[-0.402,0.4631,0.7899,0.035,0.035,0.031,0.04],[0.9134,0.2873,0.2884,0.525,0.525,0.343,0.54],[0.3864,0.9038,0.184,0.344,0.272,0.092,0.344],[0.3784,-0.8216,-0.4264,0.478,0.279,0.07,0.478],[0.1663,-0.4301,-0.8873,0.198,0.167,0.058,0.198],[-0.72,0.6127,0.3259,0.18,0.153,0.054,0.18],[0.6404,0.331,0.6931,0.278,0.278,0.278,0.278],[0.3641,0.2277,-0.9031,0.328,0.311,0.164,0.328],[-0.2823,-0.6899,-0.6666,0.172,0.172,0.179,0.212],[-0.5359,0.8144,0.2226,0.487,0.481,0.281,0.487],[0.4113,0.8058,0.426,0.273,0.268,0.154,0.273],[0.368,-0.9098,0.192,0.329,0.304,0.148,0.329],[0.7848,0.3217,0.5297,0.427,0.415,0.232,0.427],[-0.6353,-0.7721,-0.0138,0.469,0.426,0.195,0.469],[0.4036,-0.2141,0.8895,0.066,0.066,0.048,0.07],[-0.9029,0.3405,0.2623,0.42,0.322,0.106,0.42],[0.655,0.7427,-0.139,0.466,0.453,0.255,0.466],[0.4266,-0.7873,-0.4451,0.418,0.418,0.55,0.55],[-0.2344,0.9478,-0.216,0.177,0.177,0.124,0.186],[-0.2149,-0.7498,0.6258,0.396,0.396,0.453,0.507],[0.3366,0.941,0.0337,0.362,0.362,0.391,0.452],[-0.89,0.2521,0.3799,0.329,0.329,0.456,0.462],[-0.3137,-0.0731,0.9467,0.55,0.51,0.249,0.55],[-0.6897,-0.5973,-0.4092,0.095,0.085,0.037,0.095],[0.1678,-0.9843,0.0556,0.164,0.107,0.031,0.164],[-0.0796,0.1917,-0.9782,0.399,0.399,0.251,0.405],[-0.3353,0.6334,-0.6974,0.123,0.123,0.152,0.163],[-0.0924,-0.9584,-0.2701,0.462,0.461,0.275,0.462],[-0.4695,-0.5358,0.7018,0.044,0.044,0.042,0.052],[0.5211,0.3139,-0.7937,0.404,0.318,0.107,0.404],[-0.6492,-0.4351,-0.6239,0.19,0.171,0.077,0.19],[-0.4742,-0.7982,-0.3715,0.04,0.036,0.016,0.04],[-0.2692,-0.5811,0.768,0.55,0.477,0.183,0.55],[0.41,0.6559,0.6338,0.477,0.477,0.427,0.55],[0.9121,-0.1388,0.3857,0.443,0.433,0.245,0.443],[0.5381,0.3803,0.7522,0.189,0.157,0.055,0.189],[0.3419,-0.7781,-0.5269,0.223,0.2,0.088,0.223],[0.1789,-0.9161,-0.3589,0.211,0.211,0.211,0.211],[0.3921,0.822,-0.413,0.294,0.294,0.39,0.405],[-0.0654,-0.8014,-0.5945,0.38,0.344,0.157,0.38],[0.4646,0.6972,0.5459,0.334,0.319,0.171,0.334],[0.3444,-0.3174,-0.8836,0.437,0.437,0.428,0.523],[-0.5985,0.5097,0.6181,0.191,0.157,0.054,0.191],[-0.2195,-0.9405,0.2594,0.55,0.413,0.134,0.55],[0.1596,0.8873,-0.4327,0.392,0.345,0.142,0.392],[0.7922,0.5184,0.3221,0.205,0.201,0.115,0.205],[0.3819,-0.8844,-0.2684,0.142,0.142,0.128,0.164],[-0.2779,-0.196,0.9404,0.192,0.192,0.237,0.255],[-0.2927,0.4854,0.8239,0.545,0.545,0.336,0.55],[-0.0415,-0.748,-0.6624,0.409,0.319,0.106,0.409],[0.8302,0.1036,0.5477,0.139,0.132,0.07,0.139],[0.2836,0.185,-0.9409,0.129,0.121,0.062,0.129],[-0.0334,0.9739,-0.2245,0.411,0.411,0.49,0.537],[-0.2602,-0.9045,0.3378,0.401,0.327,0.112,0.401],[-0.0821,-0.0937,-0.9922,0.111,0.085,0.028,0.111],[0.7615,0.2555,-0.5957,0.231,0.227,0.131,0.231],[-0.532,-0.4309,0.7289,0.136,0.136,0.133,0.163],[-0.8567,-0.5047,-0.1064,0.185,0.185,0.239,0.239],[0.4245,-0.2775,-0.8619,0.165,0.155,0.079,0.165],[0.582,0.777,0.2398,0.301,0.301,0.211,0.316],[-0.6804,0.0525,0.731,0.24,0.24,0.211,0.275],[-0.3219,0.9465,0.0212,0.489,0.439,0.194,0.489],[0.6324,0.4223,0.6495,0.169,0.155,0.075,0.169],[0.2322,-0.0533,0.9712,0.038,0.038,0.027,0.04],[-0.2919,0.9036,0.3134,0.338,0.279,0.096,0.338],[-0.3283,-0.0281,0.9442,0.49,0.408,0.142,0.49],[-0.3638,-0.9027,-0.2297,0.063,0.058,0.027,0.063],[-0.6537,-0.7553,0.0461,0.074,0.05,0.015,0.074],[-0.8595,0.1461,0.4897,0.057,0.053,0.027,0.057],[-0.1829,0.2114,-0.9601,0.205,0.205,0.273,0.283],[-0.3643,0.5996,0.7126,0.337,0.322,0.171,0.337],[0.2602,0.4148,-0.8719,0.501,0.408,0.14,0.501],[-0.7342,-0.6151,-0.2873,0.242,0.187,0.062,0.242],[0.3712,-0.0483,0.9273,0.503,0.456,0.208,0.503],[0.707,-0.6405,-0.2997,0.122,0.117,0.064,0.122],[0.7563,-0.1115,-0.6447,0.225,0.161,0.05,0.225],[-0.3381,-0.91,0.2399,0.286,0.286,0.322,0.322],[-0.3591,-0.4856,0.797,0.515,0.419,0.144,0.515],[0.3454,-0.7119,0.6114,0.496,0.496,0.345,0.52],[0.4733,0.229,0.8506,0.55,0.452,0.156,0.55],[-0.4354,-0.249,0.8651,0.502,0.45,0.197,0.502],[-0.8573,-0.014,-0.5145,0.351,0.25,0.077,0.351],[-0.0451,0.9269,0.3725,0.374,0.374,0.431,0.431],[-0.3305,-0.1865,0.9252,0.184,0.184,0.157,0.208],[0.1016,0.9358,0.3375,0.04,0.037,0.019,0.04],[-0.5041,0.823,0.2619,0.388,0.388,0.55,0.55],[-0.7339,0.6587,0.1657,0.04,0.023,0.006,0.04],[-0.5738,0.2644,0.7751,0.28,0.271,0.15,0.28],[0.8425,0.4784,0.2476,0.375,0.375,0.273,0.4],[0.635,0.113,0.7642,0.325,0.3,0.145,0.325],[-0.3104,0.9148,-0.2583,0.169,0.169,0.126,0.182],[0.0169,-0.0946,-0.9954,0.04,0.035,0.014,0.04],[-0.5427,-0.0804,0.8361,0.498,0.498,0.399,0.55],[-0.5235,0.7905,0.3178,0.102,0.102,0.136,0.136],[-0.795,0.5746,-0.1942,0.55,0.473,0.176,0.55],[-0.4486,-0.294,-0.844,0.073,0.073,0.099,0.099],[0.0496,-0.9604,0.2741,0.044,0.044,0.028,0.045],[-0.6955,-0.3936,-0.6011,0.438,0.402,0.192,0.438],[-0.2172,-0.5818,-0.7838,0.087,0.087,0.102,0.102],[-0.9071,-0.012,-0.4206,0.194,0.151,0.05,0.194],[-0.8529,0.3648,-0.3736,0.498,0.43,0.163,0.498],[-0.7594,-0.5441,-0.3568,0.124,0.115,0.056,0.124],[0.3339,0.356,0.8728,0.147,0.147,0.144,0.175],[0.4154,-0.8963,-0.1553,0.324,0.322,0.19,0.324],[-0.5513,0.518,0.654,0.443,0.442,0.264,0.443],[-0.136,-0.9897,0.0453,0.525,0.425,0.145,0.525],[-0.283,-0.9493,-0.1372,0.038,0.038,0.026,0.04],[0.0001,-0.671,0.7414,0.214,0.201,0.104,0.214],[0.8203,-0.0401,0.5706,0.203,0.203,0.18,0.233],[-0.0016,-0.7843,0.6204,0.327,0.327,0.293,0.377],[0.1564,0.2391,-0.9583,0.203,0.203,0.143,0.214],[0.3333,-0.9333,0.1336,0.087,0.087,0.052,0.087],[-0.3075,0.2524,0.9175,0.152,0.152,0.153,0.184],[-0.7681,0.3194,-0.5549,0.341,0.341,0.226,0.352],[0.2147,-0.7946,0.5679,0.12,0.109,0.049,0.12],[-0.5676,-0.4874,-0.6635,0.157,0.122,0.041,0.157],[-0.8066,-0.5137,0.2925,0.393,0.393,0.393,0.393],[0.0254,-0.3776,-0.9256,0.128,0.105,0.036,0.128],[0.5551,-0.3827,0.7385,0.361,0.273,0.089,0.361],[-0.2024,-0.8854,-0.4185,0.094,0.09,0.049,0.094],[0.6234,-0.1559,-0.7662,0.457,0.335,0.106,0.457],[-0.5125,0.3357,0.7904,0.031,0.031,0.036,0.04],[-0.7623,-0.3377,-0.5521,0.033,0.033,0.033,0.04],[0.5215,-0.0914,0.8484,0.466,0.466,0.437,0.547],[0.0232,-0.9926,0.1191,0.397,0.397,0.321,0.44],[0.3053,-0.94,0.1525,0.367,0.367,0.295,0.405],[0.3372,0.1714,0.9257,0.546,0.476,0.188,0.546],[0.2923,0.7708,0.5661,0.377,0.359,0.19,0.377],[-0.7215,-0.6429,-0.2572,0.09,0.085,0.044,0.09],[-0.4271,-0.2422,-0.8712,0.508,0.501,0.291,0.508],[0.8477,-0.3899,-0.3598,0.079,0.079,0.109,0.109],[0.0949,0.9954,-0.0138,0.069,0.069,0.069,0.069],[0.3475,-0.2436,0.9055,0.229,0.197,0.073,0.229],[0.932,0.2321,0.2784,0.265,0.262,0.152,0.265],[0.2311,-0.3446,-0.9098,0.117,0.088,0.028,0.117],[0.6235,0.7717,-0.1255,0.407,0.407,0.525,0.525],[-0.929,0.327,0.1732,0.281,0.272,0.151,0.281],[-0.6468,0.389,0.656,0.228,0.228,0.289,0.289],[-0.1127,-0.1981,0.9737,0.238,0.206,0.079,0.238],[0.2,0.7263,0.6576,0.397,0.375,0.195,0.397],[-0.6479,-0.7313,-0.213,0.261,0.261,0.265,0.317],[-0.9472,0.2423,0.2101,0.304,0.245,0.083,0.304],[-0.6669,0.609,0.4294,0.353,0.326,0.157,0.353],[-0.5864,-0.2818,-0.7594,0.09,0.078,0.031,0.09],[0.4195,-0.8573,0.2984,0.457,0.423,0.206,0.457],[-0.2522,0.6311,0.7335,0.415,0.349,0.123,0.415],[-0.0361,0.8248,-0.5643,0.4,0.342,0.124,0.4],[-0.8081,-0.1885,0.5581,0.165,0.165,0.197,0.197],[-0.9843,0.0253,0.1749,0.344,0.322,0.161,0.344],[-0.1714,-0.0772,-0.9822,0.393,0.276,0.085,0.393],[0.3203,0.5403,0.7781,0.319,0.319,0.452,0.452],[-0.6972,0.155,0.6999,0.04,0.036,0.017,0.04],[-0.8112,0.3715,0.4516,0.101,0.101,0.109,0.126],[0.8993,-0.3395,-0.2758,0.226,0.226,0.137,0.227],[-0.7712,0.069,0.6328,0.388,0.388,0.467,0.509],[0.4589,-0.8135,-0.3572,0.235,0.235,0.18,0.255],[0.9071,0.378,0.1852,0.465,0.271,0.068,0.465],[-0.1783,-0.5339,0.8265,0.531,0.425,0.144,0.531],[0.9349,0.0371,0.353,0.073,0.073,0.058,0.08],[0.7655,0.0729,0.6393,0.532,0.491,0.238,0.532],[0.655,0.7314,-0.1899,0.357,0.357,0.454,0.454],[-0.9291,0.3697,-0.0144,0.55,0.48,0.19,0.55],[-0.8819,0.4006,0.2484,0.308,0.308,0.401,0.401],[-0.5501,0.8217,0.1493,0.173,0.173,0.245,0.247],[-0.3556,0.8914,0.2811,0.074,0.074,0.045,0.074],[-0.1441,0.8326,0.5348,0.159,0.118,0.038,0.159],[0.2043,-0.013,0.9788,0.256,0.233,0.107,0.256],[0.6678,0.5331,0.5195,0.314,0.305,0.171,0.314],[-0.0174,0.0121,0.9998,0.471,0.471,0.396,0.53],[-0.639,0.4919,0.5914,0.288,0.288,0.345,0.345],[-0.0083,-0.0305,-0.9995,0.258,0.246,0.13,0.258],[0.4884,0.6409,0.5923,0.474,0.266,0.064,0.474],[0.5975,-0.799,0.0681,0.257,0.257,0.171,0.266],[0.0797,0.3548,-0.9315,0.367,0.342,0.17,0.367],[0.129,-0.9907,0.0441,0.133,0.111,0.039,0.133],[0.4908,-0.1686,0.8548,0.359,0.359,0.264,0.384],[-0.7251,-0.6209,-0.298,0.262,0.236,0.104,0.262],[0.2161,-0.2868,0.9333,0.342,0.341,0.204,0.342],[-0.3942,-0.2216,0.8919,0.534,0.472,0.196,0.534],[-0.3407,-0.8653,0.3675,0.299,0.299,0.399,0.399],[-0.2096,0.9662,-0.15,0.265,0.172,0.049,0.265],[0.1878,0.9181,0.3491,0.04,0.039,0.023,0.04],[-0.3093,0.3558,-0.8819,0.149,0.149,0.14,0.175],[0.6946,-0.3641,-0.6204,0.296,0.229,0.076,0.296],[-0.4975,0.2171,0.8399,0.325,0.325,0.249,0.353],[-0.1828,0.9768,-0.1119,0.195,0.195,0.163,0.219],[0.7364,-0.3823,-0.5582,0.136,0.136,0.086,0.139],[-0.644,-0.4068,0.6479,0.449,0.449,0.28,0.455],[0.5169,0.8468,0.1255,0.04,0.039,0.022,0.04],[-0.1684,0.2872,0.943,0.217,0.217,0.24,0.274],[0.9457,0.2961,-0.1342,0.083,0.083,0.058,0.087],[-0.3446,0.439,-0.8298,0.353,0.308,0.122,0.353],[-0.4322,-0.1153,0.8944,0.074,0.066,0.027,0.074],[-0.4631,-0.7169,-0.5211,0.519,0.482,0.237,0.519],[0.7875,0.45,0.4212,0.159,0.154,0.085,0.159],[0.0058,-0.4293,0.9031,0.208,0.183,0.074,0.208],[-0.1132,0.5626,0.819,0.037,0.037,0.029,0.04],[0.3428,0.5871,-0.7333,0.353,0.324,0.153,0.353],[0.5112,0.4533,0.7302,0.239,0.239,0.273,0.306],[-0.4063,-0.8561,-0.3194,0.303,0.282,0.138,0.303],[0.4418,-0.6207,0.6477,0.285,0.284,0.169,0.285],[0.5217,0.8432,0.1299,0.178,0.178,0.243,0.248],[0.3405,-0.1274,0.9316,0.05,0.05,0.03,0.05],[0.7896,0.4713,-0.3929,0.076,0.076,0.106,0.107],[-0.6364,0.3529,-0.6859,0.203,0.199,0.114,0.203],[-0.3655,-0.4914,-0.7905,0.04,0.032,0.011,0.04],[0.1201,-0.9753,-0.1853,0.203,0.17,0.059,0.203],[-0.6653,0.6595,0.3499,0.363,0.363,0.287,0.399],[-0.5593,0.7528,0.3471,0.375,0.375,0.507,0.521],[0.5097,-0.8603,0.0051,0.201,0.201,0.271,0.271],[-0.4995,0.4661,-0.7303,0.357,0.357,0.213,0.357],[0.1832,0.897,0.4023,0.092,0.092,0.082,0.106],[0.1854,-0.882,0.4332,0.138,0.136,0.08,0.138],[-0.8128,0.2537,0.5245,0.075,0.046,0.012,0.075],[0.4579,-0.4137,0.7869,0.348,0.348,0.335,0.413],[-0.9293,0.3456,0.1299,0.537,0.427,0.144,0.537],[0.0019,-0.9855,-0.1694,0.04,0.033,0.011,0.04],[0.9091,-0.0535,-0.413,0.326,0.282,0.108,0.326],[-0.4304,0.7803,0.4538,0.105,0.078,0.025,0.105],[0.8054,-0.0862,0.5865,0.141,0.141,0.115,0.157],[0.5272,-0.7223,-0.4476,0.073,0.073,0.047,0.075],[0.3834,-0.2631,-0.8853,0.195,0.141,0.044,0.195],[-0.9729,-0.1737,0.1528,0.04,0.027,0.008,0.04],[0.9549,-0.2796,0.1001,0.101,0.101,0.078,0.11],[-0.4541,-0.1114,0.884,0.331,0.331,0.221,0.343],[-0.4543,0.863,0.2211,0.039,0.039,0.025,0.04],[0.6218,0.0093,-0.7831,0.107,0.107,0.082,0.116],[-0.6311,0.7496,-0.1996,0.316,0.235,0.075,0.316],[0.7066,0.3253,0.6284,0.45,0.435,0.239,0.45],[0.839,-0.1302,0.5283,0.384,0.384,0.48,0.48],[-0.0479,-0.0474,0.9977,0.501,0.425,0.15,0.501],[-0.0883,-0.8191,-0.5668,0.073,0.061,0.021,0.073],[-0.6447,0.4349,0.6286,0.289,0.289,0.298,0.353],[0.4868,0.6169,-0.6184,0.384,0.384,0.465,0.505],[-0.0217,-0.7678,-0.6403,0.084,0.065,0.021,0.084],[0.4819,-0.8762,0.0051,0.083,0.083,0.058,0.087],[0.9252,-0.3607,-0.1178,0.183,0.168,0.08,0.183],[-0.6676,-0.5557,-0.4955,0.188,0.188,0.26,0.264],[-0.9961,-0.0884,0.001,0.191,0.171,0.075,0.191],[-0.7514,-0.3822,-0.5379,0.403,0.403,0.501,0.501],[-0.3767,0.6558,0.6543,0.153,0.135,0.056,0.153],[0.6456,0.7309,0.2214,0.232,0.232,0.293,0.293],[-0.1928,0.9688,0.1559,0.087,0.067,0.022,0.087],[-0.4879,0.3558,0.7971,0.138,0.136,0.078,0.138],[-0.7736,0.0557,0.6313,0.173,0.151,0.059,0.173],[0.2851,0.852,-0.4391,0.04,0.027,0.008,0.04],[0.2665,0.317,-0.9102,0.071,0.071,0.055,0.077],[-0.5509,-0.2654,-0.7912,0.453,0.453,0.409,0.524],[-0.9391,0.3376,0.0637,0.206,0.206,0.197,0.244],[-0.0236,0.5887,-0.808,0.281,0.281,0.195,0.295],[-0.6095,-0.1327,-0.7816,0.515,0.328,0.092,0.515],[0.2177,-0.6302,-0.7453,0.55,0.463,0.162,0.55],[0.6134,0.506,0.6064,0.059,0.052,0.022,0.059],[0.4236,0.1094,0.8992,0.501,0.389,0.129,0.501],[0.5583,-0.5875,0.5857,0.25,0.237,0.123,0.25],[-0.4029,0.8905,0.2115,0.398,0.398,0.242,0.4],[-0.9295,0.1541,0.3352,0.273,0.226,0.078,0.273],[-0.791,-0.5803,-0.1936,0.103,0.101,0.058,0.103],[0.0633,-0.6239,0.779,0.096,0.073,0.024,0.096],[0.2032,-0.2819,0.9377,0.206,0.206,0.143,0.216],[-0.3407,0.0718,-0.9374,0.153,0.11,0.034,0.153],[0.341,-0.2557,0.9046,0.103,0.1,0.057,0.103],[-0.7801,-0.1606,-0.6047,0.04,0.04,0.024,0.04],[-0.4255,-0.845,-0.3241,0.509,0.486,0.26,0.509],[-0.4737,-0.8681,-0.1486,0.342,0.342,0.248,0.364],[0.568,-0.5485,-0.6136,0.356,0.308,0.118,0.356],[0.9515,-0.2427,-0.1891,0.042,0.037,0.014,0.042],[-0.2665,0.6427,0.7183,0.269,0.199,0.063,0.269]];
+
+// ── STELLATUM (Sphere of Fixed Stars) ────────────────
+// Stars placed on a rigid sphere surface using real RA/Dec positions.
+// [x,y,z] are unit-sphere direction vectors from equatorial RA/Dec.
+// [r,g,b] are B-V-derived colours scaled by brightness.
+// [br] is normalised brightness (0–1).
+const FIRM_R = 1400;
+
+function makeStellatum(){
+  const n=STAR_DATA.length;
+  const pos=new Float32Array(n*3), col=new Float32Array(n*3), sz=new Float32Array(n);
+  for(let i=0;i<n;i++){
+    const s=STAR_DATA[i];
+    pos[i*3]=s[0]*FIRM_R; pos[i*3+1]=s[1]*FIRM_R; pos[i*3+2]=s[2]*FIRM_R;
+    col[i*3]=s[3];        col[i*3+1]=s[4];          col[i*3+2]=s[5];
+    sz[i]=s[6]>0.7?2.8:s[6]>0.4?1.8:1.1;
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('color',   new THREE.BufferAttribute(col,3));
+  const mat=new THREE.PointsMaterial({size:1.6,vertexColors:true,sizeAttenuation:false,transparent:true,opacity:0.95});
+  const pts=new THREE.Points(geo,mat);
+  pts.rotation.z=23.4*Math.PI/180; // ecliptic tilt
+  return pts;
+}
+
+// ── CRYSTALLINE SPHERES ───────────────────────────────
+// Each planet rides on a transparent concentric sphere.
+// Radii are in scene units (sma*AU for planets, moonR for Moon).
+const SPHERE_DEF = [
+  {name:'moon',      label:"Moon's Sphere",     color:0x8899aa},
+  {name:'mercury',   label:"Mercury's Sphere",  color:0x9a9a9a},
+  {name:'venus',     label:"Venus' Sphere",     color:0xe8d0a0},
+  {name:'sun',       label:"Sun's Sphere",      color:0xffcc44},
+  {name:'mars',      label:"Mars' Sphere",      color:0xcc4422},
+  {name:'jupiter',   label:"Jupiter's Sphere",  color:0xc8883a},
+  {name:'saturn',    label:"Saturn's Sphere",   color:0xe0d080},
+  {name:'stellatum', label:"Stellatum",         color:0x334466},
+  {name:'primum',    label:"Primum Mobile",     color:0x445577},
+];
+
+// SMA in AU for each planet sphere
+const SPHERE_SMA = {
+  moon: null, mercury:0.387, venus:0.723, sun:1.000,
+  mars:1.524, jupiter:5.203, saturn:9.537, stellatum:null, primum:null
+};
+
+function makeCrystalSphere(radius, color){
+  const geo=new THREE.SphereGeometry(radius,48,24);
+  const mat=new THREE.MeshBasicMaterial({
+    color, side:THREE.FrontSide, transparent:true, opacity:0.04, depthWrite:false
+  });
+  const mesh=new THREE.Mesh(geo,mat);
+  const ring=makeRing(radius,color,0.08,96);
+  ring.userData.isSphereRing=true;
+  mesh.add(ring);
+  mesh.userData.radius=radius;
+  mesh.userData.color=color;
+  return mesh;
+}
+
+// Rebuild a sphere mesh at a new radius (replaces geometry in-place)
+function resizeCrystalSphere(mesh, radius){
+  if(Math.abs(mesh.userData.radius-radius)<0.01) return; // no change
+  mesh.geometry.dispose();
+  mesh.geometry=new THREE.SphereGeometry(radius,48,24);
+  mesh.userData.radius=radius;
+  // Replace equator ring
+  const old=mesh.children.find(c=>c.userData.isSphereRing);
+  if(old){ mesh.remove(old); }
+  const ring=makeRing(radius,mesh.userData.color,0.08,96);
+  ring.userData.isSphereRing=true;
+  mesh.add(ring);
+}
+
+// ── ECLIPTIC GRID ──────────────────────────────────────
+function makeGrid(){
+  const g=new THREE.Group();
+  const mat=new THREE.LineBasicMaterial({color:0x1a3322,transparent:true,opacity:0.5});
+  for(let r=AU;r<=AU*12;r+=AU){
+    const arr=makeCirclePts(r,96);
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.BufferAttribute(arr,3));
+    g.add(new THREE.Line(geo,mat));
+  }
+  for(let a=0;a<360;a+=30){
+    const rad=a*DEG;
+    const pts=new Float32Array([0,0,0,AU*12*Math.cos(rad),0,AU*12*Math.sin(rad)]);
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.BufferAttribute(pts,3));
+    g.add(new THREE.Line(geo,mat));
+  }
+  return g;
+}
+
+// ── INIT THREE.JS ─────────────────────────────────────
+function init(){
+  const vp=document.getElementById('viewport');
+  const W=vp.clientWidth, H=vp.clientHeight-22;
+
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x000008);
+
+  camera=new THREE.PerspectiveCamera(50,W/H,0.1,6000);
+  applyCam();
+
+  renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});
+  renderer.setSize(W,H);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  vp.insertBefore(renderer.domElement, document.getElementById('statusbar'));
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0x111111,1.5));
+  sunLight=new THREE.PointLight(0xffffcc,2.2,2500);
+  scene.add(sunLight);
+
+  // Scene geometry
+  stellatum=makeStellatum(); stellatum.visible=true; scene.add(stellatum);
+
+  // Build crystalline spheres — radii/positions updated per-frame by updateSpheres()
+  for(const sd of SPHERE_DEF){
+    const sp=makeCrystalSphere(1, sd.color); // placeholder radius; resized each frame
+    sp.visible=false;
+    scene.add(sp);
+    crystalSpheres[sd.name]=sp;
+  }
+  eclipticGrid=makeGrid(); eclipticGrid.visible=false; scene.add(eclipticGrid);
+
+  // Sun glow sprite
+  const gm=new THREE.SpriteMaterial({
+    map:glowTex(),transparent:true,
+    blending:THREE.AdditiveBlending,depthWrite:false
+  });
+  sunGlow=new THREE.Sprite(gm); sunGlow.scale.set(50,50,1); sunGlow.renderOrder=5;
+  scene.add(sunGlow);
+
+  // ── MAN-CENTRIC: Earth globe + stick figure ──────────
+  // The man figure is placed at world-space (0,0,0) — he IS the coordinate
+  // origin because dispPos() subtracts his heliocentric position from
+  // everything.  The Earth globe is a decorative mesh whose position is
+  // updated each frame to Earth's centre in the man's frame.
+  {
+    const eg=new THREE.SphereGeometry(MC_R,32,24);
+    const em=new THREE.MeshPhongMaterial({color:0x1a3a6a,emissive:0x050e1a,shininess:20});
+    earthSphere=new THREE.Mesh(eg,em);
+    const atm=makeRing(MC_R*1.08,0x3366aa,0.22,96); atm.rotation.x=Math.PI/2;
+    earthSphere.add(atm);
+    earthSphere.visible=false;
+    scene.add(earthSphere);
+  }
+
+  // Stick-figure man — always at world origin in man-centric mode
+  {
+    const manMat=new THREE.MeshPhongMaterial({color:0xffd080,emissive:0x332200});
+    const darkMat=new THREE.MeshPhongMaterial({color:0x553300,emissive:0x110800});
+    const head=new THREE.Mesh(new THREE.SphereGeometry(0.38,8,6),manMat);
+    head.position.y=2.05;
+    const torso=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.22,1.0,6),darkMat);
+    torso.position.y=1.35;
+    const armGeo=new THREE.CylinderGeometry(0.09,0.07,0.72,4);
+    const armL=new THREE.Mesh(armGeo,manMat);
+    armL.position.set(-0.48,1.45,0); armL.rotation.z=Math.PI/2+0.35;
+    const armR=new THREE.Mesh(armGeo,manMat);
+    armR.position.set(0.48,1.45,0);  armR.rotation.z=-(Math.PI/2+0.35);
+    const legGeo=new THREE.CylinderGeometry(0.11,0.09,0.9,4);
+    const legL=new THREE.Mesh(legGeo,darkMat);
+    legL.position.set(-0.2,0.45,0); legL.rotation.z=0.15;
+    const legR=new THREE.Mesh(legGeo,darkMat);
+    legR.position.set(0.2,0.45,0);  legR.rotation.z=-0.15;
+    const footGeo=new THREE.SphereGeometry(0.14,4,3);
+    const footL=new THREE.Mesh(footGeo,darkMat); footL.position.set(-0.22,-0.02,0.08);
+    const footR=new THREE.Mesh(footGeo,darkMat); footR.position.set(0.22,-0.02,0.08);
+    manGroup=new THREE.Group();
+    manGroup.add(head,torso,armL,armR,legL,legR,footL,footR);
+    manGroup.position.set(0,0,0); // he is the origin
+    manGroup.visible=false;
+    scene.add(manGroup);
+  }
+
+  // Build each planet
+  for(const name of NAMES){
+    const d=BODIES[name];
+
+    // Sphere mesh
+    const geo=new THREE.SphereGeometry(d.radius,24,16);
+    const mat=name==='sun'
+      ? new THREE.MeshBasicMaterial({color:d.color})
+      : new THREE.MeshPhongMaterial({color:d.color,emissive:new THREE.Color(d.color).multiplyScalar(0.04),shininess:25});
+    const mesh=new THREE.Mesh(geo,mat);
+    mesh.renderOrder=3;
+    scene.add(mesh); meshes[name]=mesh;
+
+    // Saturn rings
+    if(name==='saturn'){
+      const rg=makeSaturnRings(d.radius*1.45,d.radius*2.5);
+      const rm=new THREE.MeshBasicMaterial({color:0xc0b060,transparent:true,opacity:0.72,side:THREE.DoubleSide});
+      const rings=new THREE.Mesh(rg,rm);
+      rings.rotation.x=Math.PI*0.42;
+      mesh.add(rings);
+    }
+
+    // Label sprite
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({
+      map:labelTex(d.symbol,d.color),transparent:true,depthTest:false
+    }));
+    sp.scale.set(8,8,1); sp.renderOrder=10;
+    scene.add(sp); labels[name]=sp;
+
+    // Trail — sized from S.trailLen at init; resizeTrail() reallocates properly
+    {
+      const n=S.trailLen;
+      const arr=new Float32Array(n*3);
+      const geo2=new THREE.BufferGeometry();
+      geo2.setAttribute('position',new THREE.BufferAttribute(arr,3));
+      geo2.setDrawRange(0,0);
+      const mat2=new THREE.LineBasicMaterial({
+        color:0xffee88,transparent:true,
+        opacity:name==='moon'?0.28:0.38
+      });
+      const line=new THREE.Line(geo2,mat2); line.renderOrder=1;
+      scene.add(line);
+      trailObjs[name]={buf:new TrailBuf(n),arr,geo:geo2,line};
+    }
+
+    // Orbit rings (heliocentric default)
+    if(name!=='sun'&&name!=='moon'&&name!=='earth'){
+      const ring=makeRing(d.sma*AU,0x2a4422,0.35);
+      ring.visible=S.showOrbits; scene.add(ring); orbitRings[name]=ring;
+    }
+    // Moon orbit ring (small, around Earth in geocentric / around Earth-position in helio)
+    if(name==='moon'){
+      const mring=makeRing(d.moonR,0x333344,0.30);
+      mring.visible=S.showOrbits; scene.add(mring); orbitRings['moon']=mring;
+    }
+    // Sun geocentric orbit ring (used in geocentric models)
+    if(name==='sun'){
+      const sring=makeRing(AU,0x554400,0.30);
+      sring.visible=false; scene.add(sring); orbitRings['sun_geo']=sring;
+    }
+
+    // Ptolemaic machinery
+    if(name!=='sun'&&name!=='earth'&&name!=='moon'){
+      const isOuter=d.type==='outer';
+      // Deferent: large circle centred at Earth (geocentric origin)
+      // Outer: radius=planet helio orbit; Inner: radius=Earth orbit (= 1 AU)
+      const defR=isOuter?d.sma*AU:AU;
+      const epiR=isOuter?AU:d.sma*AU;
+
+      const def=makeRing(defR,0x3355aa,0.45); def.visible=false;
+      const epi=makeRing(epiR,0x7744cc,0.55); epi.visible=false;
+
+      // Dot at epicycle centre
+      const dotG=new THREE.SphereGeometry(0.6,8,8);
+      const dotM=new THREE.MeshBasicMaterial({color:0xaaaaff});
+      const dot=new THREE.Mesh(dotG,dotM); dot.visible=false;
+
+      // Arm lines
+      const arm1=makeArmLine(0x3355aa,0.40); arm1.visible=false;
+      const arm2=makeArmLine(0x7744cc,0.50); arm2.visible=false;
+
+      scene.add(def,epi,dot,arm1,arm2);
+      mach[name]={def,epi,dot,arm1,arm2,isOuter};
+    }
+  }
+
+
+  // Firmament (stars on sphere) already created above
+  setupMouse();
+  setupUI();
+  document.getElementById('loading').style.display='none';
+
+  lastT=performance.now();
+  fpsT=lastT;
+  requestAnimationFrame(animate);
+}
+
+// ── CAMERA ────────────────────────────────────────────
+function applyCam(){
+  if(S.cosmology==='mancentric') return; // camera driven per-frame in update()
+  camera.position.set(
+    cam.tx+cam.r*Math.sin(cam.phi)*Math.cos(cam.theta),
+    cam.ty+cam.r*Math.cos(cam.phi),
+    cam.tz+cam.r*Math.sin(cam.phi)*Math.sin(cam.theta)
+  );
+  camera.lookAt(cam.tx,cam.ty,cam.tz);
+}
+function resetCam(){
+  cam.theta=0.5; cam.phi=1.1; cam.r=280; cam.tx=0; cam.ty=0; cam.tz=0;
+  S.manRoll=0; camera.up.set(0,1,0); applyCam();
+}
+
+function setupMouse(){
+  const cv=renderer.domElement;
+  cv.addEventListener('mousedown',e=>{
+    if(e.button===0)isDrag=true;
+    if(e.button===1||e.button===2)isPan=true;
+    lmx=e.clientX; lmy=e.clientY;
+    cv.classList.add('drag'); e.preventDefault();
+  });
+  window.addEventListener('mouseup',()=>{isDrag=false;isPan=false;renderer.domElement.classList.remove('drag');});
+  window.addEventListener('mousemove',e=>{
+    const dx=e.clientX-lmx, dy=e.clientY-lmy;
+    lmx=e.clientX; lmy=e.clientY;
+    if(isDrag&&e.buttons===1){
+      if(S.cosmology==='mancentric'){
+        S.manRoll+=dx*0.008; // LMB drag left/right rolls the camera
+      } else {
+        cam.theta-=dx*0.007; cam.phi-=dy*0.007;
+        cam.phi=Math.max(0.04,Math.min(Math.PI-0.04,cam.phi));
+        applyCam();
+      }
+    }
+    if(isPan&&(e.buttons===2||e.buttons===4)){
+      const ps=cam.r*0.0008;
+      // Pan in world XY (approximate)
+      const right=new THREE.Vector3();
+      right.crossVectors(camera.up,new THREE.Vector3().subVectors(
+        new THREE.Vector3(cam.tx,cam.ty,cam.tz),camera.position)).normalize();
+      const up2=new THREE.Vector3(0,1,0);
+      cam.tx-=right.x*dx*ps*10; cam.ty+=dy*ps*10; cam.tz-=right.z*dx*ps*10;
+      applyCam();
+    }
+  });
+  cv.addEventListener('wheel',e=>{
+    cam.r*=(1+e.deltaY*0.0008); cam.r=Math.max(10,Math.min(3500,cam.r));
+    applyCam(); e.preventDefault();
+  },{passive:false});
+  // Double-left-click: follow a body (raycast); if nothing hit, release follow
+  const raycaster=new THREE.Raycaster();
+  const mouse2=new THREE.Vector2();
+  cv.addEventListener('dblclick',e=>{
+    const rect=cv.getBoundingClientRect();
+    mouse2.x=((e.clientX-rect.left)/rect.width)*2-1;
+    mouse2.y=-((e.clientY-rect.top)/rect.height)*2+1;
+    raycaster.setFromCamera(mouse2,camera);
+    // Test planet meshes + man group children
+    const targets=[...NAMES.map(n=>meshes[n]),...(manGroup?manGroup.children:[])].filter(Boolean);
+    const hits=raycaster.intersectObjects(targets,true);
+    if(hits.length>0){
+      const hitMesh=hits[0].object;
+      // Check if it's part of manGroup
+      let obj=hitMesh; while(obj&&obj!==manGroup) obj=obj.parent;
+      if(obj===manGroup){ S.followTarget='man'; return; }
+      const hitName=Object.entries(meshes).find(([k,v])=>v===hitMesh)?.[0];
+      if(hitName){ S.followTarget=hitName; return; }
+    }
+    S.followTarget=null;
+  });
+  // Double-right-click: reset camera
+  let lastRightClick=0;
+  cv.addEventListener('mousedown',e=>{
+    if(e.button===2){
+      const now=performance.now();
+      if(now-lastRightClick<400){ S.followTarget=null; resetCam(); }
+      lastRightClick=now;
+    }
+  },{capture:true});
+  cv.addEventListener('contextmenu',e=>e.preventDefault());
+  // Roll is handled by LMB drag in man-centric mode (see mousemove)
+}
+
+// ── UI ────────────────────────────────────────────────
+const COSM_NAME={copernican:'Copernican',tychonian:'Tychonian',ptolemaic:'Ptolemaic',mancentric:'Man-Centric'};
+
+function setupUI(){
+  document.querySelectorAll('input[name="cosm"]').forEach(r=>{
+    r.addEventListener('change',()=>{
+      S.cosmology=r.value;
+      clearTrails();
+      refreshOrbitRings();
+      refreshMachinery();
+      const isMC=(r.value==='mancentric');
+      earthSphere.visible=isMC&&S.enabled.has('earth');
+      manGroup.visible=S.showMan&&S.enabled.has('earth');
+      if(isMC){ cam.r=180; S.manRoll=0; }
+      else{ camera.up.set(0,1,0); }
+      document.getElementById('sb-model').textContent=COSM_NAME[r.value];
+      document.getElementById('cosm-desc').textContent=COSM_DESC[r.value];
+      // Sun has no sphere in Copernican model — grey the checkbox
+      const sunSphEl=document.getElementById('sph-sun');
+      if(sunSphEl){
+        const noSunSph=(r.value==='copernican'||r.value==='mancentric');
+        sunSphEl.disabled=noSunSph;
+        sunSphEl.parentElement.style.opacity=noSunSph?'0.35':'1';
+      }
+    });
+  });
+
+  document.querySelectorAll('input[name="body"]').forEach(cb=>{
+    cb.addEventListener('change',()=>{
+      if(cb.checked) S.enabled.add(cb.value);
+      else{ S.enabled.delete(cb.value); clearTrail(cb.value); }
+      refreshVisibility();
+    });
+  });
+
+  document.getElementById('btn-all').addEventListener('click',()=>{
+    document.querySelectorAll('input[name="body"]').forEach(cb=>{cb.checked=true;S.enabled.add(cb.value);});
+    refreshVisibility();
+  });
+  document.getElementById('btn-none').addEventListener('click',()=>{
+    document.querySelectorAll('input[name="body"]').forEach(cb=>{cb.checked=false;S.enabled.delete(cb.value);});
+    refreshVisibility();
+  });
+  // Per-body trail toggles
+  document.querySelectorAll('input[name="trail"]').forEach(cb=>{
+    cb.addEventListener('change',()=>{
+      if(cb.checked) S.trailEnabled.add(cb.value);
+      else{ S.trailEnabled.delete(cb.value); clearTrail(cb.value); }
+      refreshVisibility();
+    });
+  });
+
+  // Show Man toggle
+  document.getElementById('opt-man').addEventListener('change',function(){
+    S.showMan=this.checked; refreshVisibility();
+  });
+
+  // Man walking speed slider (laps/day)
+  function updateManSpeedDisplay(){
+    const rate=MC_WALK_RATE;
+    const kmDay=(rate*40075).toFixed(0);
+    document.getElementById('man-speed-val').textContent=rate.toFixed(3)+' laps/day';
+    document.getElementById('man-speed-km').textContent=
+      rate===0 ? 'Stationary' : '~'+kmDay+' km/day';
+    document.getElementById('man-dir-label').textContent=
+      MC_WALK_DIR===1?'with':'against';
+    document.getElementById('man-speed-sl').value=rate;
+  }
+  document.getElementById('man-speed-sl').addEventListener('input',function(){
+    MC_WALK_RATE=parseFloat(this.value);
+    updateManSpeedDisplay(); clearTrails();
+  });
+  document.getElementById('man-dir-with').addEventListener('click',function(){
+    MC_WALK_DIR=+1; updateManSpeedDisplay(); clearTrails();
+    this.style.background='#c8d8c8'; this.style.borderColor='#446644 #88aa88 #88aa88 #446644';
+    document.getElementById('man-dir-against').style.background='';
+    document.getElementById('man-dir-against').style.borderColor='';
+  });
+  document.getElementById('man-dir-against').addEventListener('click',function(){
+    MC_WALK_DIR=-1; updateManSpeedDisplay(); clearTrails();
+    this.style.background='#d8c8c8'; this.style.borderColor='#664444 #aa8888 #aa8888 #664444';
+    document.getElementById('man-dir-with').style.background='';
+    document.getElementById('man-dir-with').style.borderColor='';
+  });
+  document.getElementById('man-stop').addEventListener('click',function(){
+    MC_WALK_RATE=0;
+    document.getElementById('man-speed-sl').value=0;
+    updateManSpeedDisplay(); clearTrails();
+  });
+  updateManSpeedDisplay();
+
+  // Individual celestial sphere toggles
+  const SPHERE_IDS=['moon','mercury','venus','sun','mars','jupiter','saturn','stellatum','primum'];
+  for(const n of SPHERE_IDS){
+    const el=document.getElementById('sph-'+n);
+    if(el) el.addEventListener('change',function(){
+      if(crystalSpheres[n]) crystalSpheres[n].visible=this.checked;
+    });
+  }
+  document.getElementById('sph-all').addEventListener('click',()=>{
+    for(const n of SPHERE_IDS){
+      const el=document.getElementById('sph-'+n);
+      if(el){ el.checked=true; if(crystalSpheres[n]) crystalSpheres[n].visible=true; }
+    }
+  });
+  document.getElementById('sph-none').addEventListener('click',()=>{
+    for(const n of SPHERE_IDS){
+      const el=document.getElementById('sph-'+n);
+      if(el){ el.checked=false; if(crystalSpheres[n]) crystalSpheres[n].visible=false; }
+    }
+  });
+
+  const speedSl=document.getElementById('speed-sl');
+  speedSl.addEventListener('input',()=>{ S.speedExp=parseFloat(speedSl.value); refreshSpeed(); });
+  refreshSpeed();
+
+  document.getElementById('btn-pause').addEventListener('click',function(){
+    S.paused=!S.paused; this.textContent=S.paused?'▶ Resume':'⏸ Pause';
+  });
+  document.getElementById('btn-rev').addEventListener('click',function(){
+    S.reversed=!S.reversed;
+    this.style.background=S.reversed?'#9090e0':'';
+    this.style.borderColor=S.reversed?'#6060cc #9090ff #9090ff #6060cc':'';
+  });
+  document.getElementById('btn-reset').addEventListener('click',()=>{ S.time=0; clearTrails(); });
+
+  document.getElementById('opt-labels').addEventListener('change',function(){
+    S.showLabels=this.checked;
+    for(const sp of Object.values(labels)) sp.visible=this.checked;
+  });
+  // Trail visibility now per-body (see trail checkbox handlers above)
+  document.getElementById('opt-orbits').addEventListener('change',function(){
+    S.showOrbits=this.checked; refreshOrbitRings();
+  });
+  document.getElementById('opt-machinery').addEventListener('change',function(){
+    S.showMachinery=this.checked; refreshMachinery();
+  });
+  document.getElementById('opt-grid').addEventListener('change',function(){
+    S.showGrid=this.checked; eclipticGrid.visible=this.checked;
+  });
+
+  document.getElementById('trail-sl').addEventListener('input',function(){
+    S.trailLen=parseInt(this.value);
+    document.getElementById('trail-val').textContent=this.value+' pts';
+    resizeAllTrails(S.trailLen);
+  });
+  document.getElementById('density-sl').addEventListener('input',function(){
+    S.sampleInterval=parseFloat(this.value);
+    document.getElementById('density-val').textContent=this.value+' d/sample';
+  });
+
+  document.getElementById('opt-stellatum').addEventListener('change',function(){
+    S.showStellatum=this.checked;
+    if(stellatum) stellatum.visible=this.checked;
+  });
+  // Sphere toggles now handled individually (see SPHERE_IDS loop above)
+  window.addEventListener('resize',()=>{
+    const vp=document.getElementById('viewport');
+    const W=vp.clientWidth, H=vp.clientHeight-22;
+    camera.aspect=W/H; camera.updateProjectionMatrix();
+    renderer.setSize(W,H);
+  });
+}
+
+function refreshSpeed(){
+  const dps=Math.pow(10,S.speedExp);
+  const l=fmtSpd(dps);
+  document.getElementById('speed-val').textContent=l;
+  document.getElementById('sb-speed').textContent=l;
+}
+function fmtSpd(d){
+  if(d<2)return d.toFixed(3)+' d/s';
+  if(d<365)return d.toFixed(1)+' d/s';
+  return (d/365.25).toFixed(2)+' yr/s';
+}
+
+function refreshVisibility(){
+  const isMC=(S.cosmology==='mancentric');
+  for(const name of NAMES){
+    const on=S.enabled.has(name);
+    meshes[name].visible = (isMC && name==='earth') ? false : on;
+    labels[name].visible=on&&S.showLabels&&!(isMC&&name==='earth');
+    trailObjs[name].line.visible=on&&S.trailEnabled.has(name)&&!(isMC&&name==='earth');
+    if(name==='sun'&&sunGlow) sunGlow.visible=on;
+  }
+  earthSphere.visible=isMC&&S.enabled.has('earth');
+  manGroup.visible=S.showMan&&S.enabled.has('earth');
+  refreshOrbitRings();
+  refreshMachinery();
+}
+
+function refreshOrbitRings(){
+  const c=S.cosmology;
+  // Default: show heliocentric orbit circles in Copernican
+  for(const [n,ring] of Object.entries(orbitRings)){
+    if(n==='sun_geo'){
+      ring.visible=S.showOrbits&&(c==='tychonian'||c==='ptolemaic');
+      ring.position.set(0,0,0); // centred at Earth in geocentric
+      continue;
+    }
+    if(n==='moon'){
+      ring.visible=S.showOrbits&&S.enabled.has('moon')&&c!=='mancentric';
+      continue;
+    }
+    const enabled=S.enabled.has(n);
+    if(c==='copernican'){
+      ring.visible=S.showOrbits&&enabled;
+      ring.position.set(0,0,0);
+    } else if(c==='tychonian'){
+      ring.visible=S.showOrbits&&enabled;
+      // centre updated each frame to geocentric Sun position
+    } else {
+      // Ptolemaic / man-centric: hide orbit rings (machinery shows deferents)
+      ring.visible=false;
+    }
+  }
+}
+
+function refreshMachinery(){
+  const show=S.showMachinery&&S.cosmology==='ptolemaic';
+  for(const [n,m] of Object.entries(mach)){
+    const on=S.enabled.has(n)&&show;
+    m.def.visible=on; m.epi.visible=on; m.dot.visible=on;
+    m.arm1.visible=on; m.arm2.visible=on;
+  }
+}
+
+
+// Properly resize a trail: reallocates Float32Array and geometry attribute
+function resizeTrail(name, newN){
+  const to=trailObjs[name];
+  to.buf.resize(newN);
+  const newArr=new Float32Array(newN*3);
+  to.arr=newArr;
+  to.geo.setAttribute('position',new THREE.BufferAttribute(newArr,3));
+  to.geo.setDrawRange(0,0);
+}
+function resizeAllTrails(newN){
+  for(const name of NAMES) resizeTrail(name,newN);
+}
+
+function clearTrail(name){
+  const t=trailObjs[name];
+  t.buf.clear(); t.geo.setDrawRange(0,0); t.geo.attributes.position.needsUpdate=true;
+}
+function clearTrails(){ for(const n of NAMES) clearTrail(n); }
+
+// ── EPICYCLE MACHINERY UPDATE ─────────────────────────
+function updateMachinery(t){
+  if(!S.showMachinery||S.cosmology!=='ptolemaic') return;
+  const earthAng=BODIES.earth.L0*DEG+(2*Math.PI/BODIES.earth.period)*t;
+
+  for(const [name,m] of Object.entries(mach)){
+    if(!S.enabled.has(name)||!m.def.visible) continue;
+    const d=BODIES[name];
+    const pa=d.L0*DEG+(2*Math.PI/d.period)*t;
+
+    let epiCtr;
+    if(m.isOuter){
+      // Epicycle centre = planet's mean-motion point on deferent (= heliocentric planet scaled)
+      epiCtr=new THREE.Vector3(d.sma*Math.cos(pa)*AU,0,d.sma*Math.sin(pa)*AU);
+    } else {
+      // Inner planet: epicycle centred at geocentric Sun position
+      epiCtr=new THREE.Vector3(
+        -Math.cos(earthAng)*AU, 0, -Math.sin(earthAng)*AU
+      );
+    }
+
+    m.dot.position.copy(epiCtr);
+    m.epi.position.copy(epiCtr);
+
+    // Arm 1: Earth (0,0,0) → epiCtr
+    const a1=m.arm1._arr;
+    a1[0]=0;a1[1]=0;a1[2]=0;
+    a1[3]=epiCtr.x;a1[4]=epiCtr.y;a1[5]=epiCtr.z;
+    m.arm1.geometry.attributes.position.needsUpdate=true;
+
+    // Arm 2: epiCtr → planet
+    const ppos=meshes[name].position;
+    const a2=m.arm2._arr;
+    a2[0]=epiCtr.x;a2[1]=epiCtr.y;a2[2]=epiCtr.z;
+    a2[3]=ppos.x;a2[4]=ppos.y;a2[5]=ppos.z;
+    m.arm2.geometry.attributes.position.needsUpdate=true;
+  }
+}
+
+// ── PER-FRAME UPDATE ──────────────────────────────────
+function update(dt){
+  if(!S.paused){
+    const dps=Math.pow(10,S.speedExp);
+    const sdt=dps*dt*(S.reversed?-1:1);
+    S.time+=sdt;
+    trailAccum+=Math.abs(sdt);
+    const si=S.sampleInterval;
+    while(trailAccum>=si){
+      trailAccum-=si;
+      for(const name of NAMES){
+        if(!S.enabled.has(name)) continue;
+        trailObjs[name].buf.push(dispPos(name,S.time));
+      }
+    }
+  }
+
+  // Update planet positions
+  for(const name of NAMES){
+    const pos=dispPos(name,S.time);
+    meshes[name].position.copy(pos);
+    labels[name].position.set(pos.x,pos.y+BODIES[name].radius+3.5,pos.z);
+
+    if(name==='sun'){
+      sunLight.position.copy(pos);
+      if(sunGlow) sunGlow.position.copy(pos);
+    }
+  }
+
+  // Follow mode: pivot camera around the followed body
+  if(S.followTarget && S.cosmology!=='mancentric'){
+    const fp = S.followTarget==='man'
+      ? manGroup.position          // follow man on Earth surface
+      : meshes[S.followTarget]?.position;
+    if(fp){ cam.tx=fp.x; cam.ty=fp.y; cam.tz=fp.z; applyCam(); }
+  }
+
+  // Moon orbit ring: follow Earth in helio / stay at origin in geocentric
+  if(orbitRings['moon']){
+    const ep=meshes['earth'].position;
+    orbitRings['moon'].position.copy(ep);
+  }
+
+  // Tychonian: orbit rings follow geocentric Sun
+  if(S.cosmology==='tychonian'&&S.showOrbits){
+    const sp=meshes['sun'].position;
+    for(const [n,ring] of Object.entries(orbitRings)){
+      if(n!=='sun_geo'&&n!=='moon') ring.position.copy(sp);
+    }
+  }
+
+  // Man: position and orient every frame in all models
+  if(S.showMan && S.enabled.has('earth')){
+    if(S.cosmology==='mancentric'){
+      // In mancentric he IS the origin — axes only, position stays 0,0,0
+      const {up,forward,right}=manAxes(S.time);
+      const back=forward.clone().negate();
+      const mat4=new THREE.Matrix4().makeBasis(right,up,back);
+      manGroup.setRotationFromMatrix(mat4);
+      manGroup.position.set(0,0,0);
+    } else {
+      // In all other models: stand on the visual Earth mesh surface
+      const ep=meshes['earth'].position;
+      const eR=BODIES.earth.radius; // visual mesh radius (2.4 scene units)
+      const wa=manWalkAngle(S.time);
+      const up=new THREE.Vector3(Math.sin(wa),0,Math.cos(wa)).normalize();
+      const forward=new THREE.Vector3(Math.cos(wa),0,-Math.sin(wa)).normalize();
+      const right=new THREE.Vector3().crossVectors(forward,up).normalize();
+      const back=forward.clone().negate();
+      const mat4=new THREE.Matrix4().makeBasis(right,up,back);
+      manGroup.setRotationFromMatrix(mat4);
+      // Place man at Earth centre + one radius outward (on surface)
+      manGroup.position.copy(ep).addScaledVector(up, eR);
+    }
+  }
+
+  // Man-centric: Earth globe + camera lock
+  if(S.cosmology==='mancentric'){
+    const {up,forward,right}=manAxes(S.time);
+
+    // Orient man: local +Y → surface normal (up), local -Z → forward (walking)
+    const back=forward.clone().negate();
+    const mat4=new THREE.Matrix4().makeBasis(right,up,back);
+    manGroup.setRotationFromMatrix(mat4);
+    manGroup.position.set(0,0,0);
+
+    // Earth globe: centre is at -(man's surface offset from earth centre)
+    const _wa=manWalkAngle(S.time);
+    earthSphere.position.set(-MC_R*Math.sin(_wa), 0, -MC_R*Math.cos(_wa));
+    earthSphere.rotation.y=2*Math.PI*S.time/1.0;
+
+    // Camera locked behind and above, following man's walking direction
+    // Roll: rotate camera position around the forward axis by S.manRoll
+    const baseBack=forward.clone().negate().multiplyScalar(cam.r*0.85);
+    const baseUp=up.clone().multiplyScalar(cam.r*0.35);
+    const rollCos=Math.cos(S.manRoll), rollSin=Math.sin(S.manRoll);
+    // Rodrigues rotation of baseUp around forward axis
+    const f=forward.clone();
+    const rolledUp=baseUp.clone().multiplyScalar(rollCos)
+      .addScaledVector(new THREE.Vector3().crossVectors(f,baseUp),rollSin);
+    const camPos=baseBack.clone().add(rolledUp);
+    camera.position.copy(camPos);
+    // Camera up = rolled surface-normal
+    const camUp=up.clone().multiplyScalar(rollCos)
+      .addScaledVector(new THREE.Vector3().crossVectors(f,up),rollSin);
+    camera.up.copy(camUp.normalize());
+    camera.lookAt(0,0,0);
+  }
+
+
+// ── CRYSTALLINE SPHERES — per-model update ────────────────────────────────
+// Each model defines different centres and radii for each sphere.
+function updateSpheres(){
+  const c=S.cosmology;
+  const MOONR=BODIES.moon.moonR;
+  const origin=new THREE.Vector3(0,0,0);
+  const earthPos=meshes['earth'].position; // geocentric Earth (0,0,0 in geo models)
+  const sunPos=meshes['sun'].position;     // geocentric Sun pos (for Tychonian)
+
+  // Helper: configure a sphere's centre and radius
+  function setSph(name, centre, radius){
+    const sp=crystalSpheres[name];
+    if(!sp) return;
+    resizeCrystalSphere(sp, radius);
+    sp.position.copy(centre);
+  }
+
+  if(c==='copernican'){
+    // Sun is at origin — no Sun sphere (it is the centre, not an orbiting body)
+    // Each planet's sphere is concentric around the Sun
+    setSph('sun',      origin,  0.001);          // hidden/invisible
+    setSph('mercury',  origin,  0.387*AU);
+    setSph('venus',    origin,  0.723*AU);
+    setSph('moon',     earthPos, MOONR);          // Moon sphere travels with Earth
+    setSph('mars',     origin,  1.524*AU);
+    setSph('jupiter',  origin,  5.203*AU);
+    setSph('saturn',   origin,  9.537*AU);
+    setSph('stellatum',origin,  FIRM_R*0.98);
+    setSph('primum',   origin,  FIRM_R*1.01);
+    // Hide Sun sphere checkbox sphere entirely
+    crystalSpheres['sun'].visible=false;
+
+  } else if(c==='tychonian'){
+    // Earth fixed at origin.
+    // Moon and Sun orbit Earth — spheres centred at Earth (origin).
+    // All planets orbit the Sun — spheres centred on Sun's geocentric position.
+    setSph('moon',     origin,  MOONR);
+    setSph('sun',      origin,  1.0*AU);
+    setSph('mercury',  sunPos,  0.387*AU);
+    setSph('venus',    sunPos,  0.723*AU);
+    setSph('mars',     sunPos,  1.524*AU);
+    setSph('jupiter',  sunPos,  5.203*AU);
+    setSph('saturn',   sunPos,  9.537*AU);
+    setSph('stellatum',origin,  FIRM_R*0.98);
+    setSph('primum',   origin,  FIRM_R*1.01);
+
+  } else if(c==='ptolemaic'){
+    // Earth at origin. All spheres concentric around Earth.
+    // Classical Ptolemaic order: Moon, Mercury, Venus, Sun, Mars, Jupiter, Saturn
+    setSph('moon',     origin,  MOONR);
+    setSph('mercury',  origin,  0.387*AU);
+    setSph('venus',    origin,  0.723*AU);
+    setSph('sun',      origin,  1.0*AU);
+    setSph('mars',     origin,  1.524*AU);
+    setSph('jupiter',  origin,  5.203*AU);
+    setSph('saturn',   origin,  9.537*AU);
+    setSph('stellatum',origin,  FIRM_R*0.98);
+    setSph('primum',   origin,  FIRM_R*1.01);
+
+  } else if(c==='mancentric'){
+    // Man-Centric uses Copernican geometry as its truth.
+    // The man is the camera origin, but the Sun is the cosmological centre.
+    // All planetary spheres centred on the Sun's current position in man's frame.
+    // Moon sphere follows the Earth globe.
+    const sp=meshes['sun'].position;
+    const ep=earthSphere.position;
+    setSph('sun',      origin,  0.001);      // Sun has no sphere (it is the centre)
+    setSph('mercury',  sp,      0.387*AU);
+    setSph('venus',    sp,      0.723*AU);
+    setSph('moon',     ep,      MOONR);
+    setSph('mars',     sp,      1.524*AU);
+    setSph('jupiter',  sp,      5.203*AU);
+    setSph('saturn',   sp,      9.537*AU);
+    setSph('stellatum',sp,      FIRM_R*0.98);
+    setSph('primum',   sp,      FIRM_R*1.01);
+    crystalSpheres['sun'].visible=false;
+  }
+
+  // Re-apply visibility from checkbox state (resizeCrystalSphere resets nothing,
+  // but we must not override user checkbox choices except for Sun in Copernican)
+  const SPHERE_IDS=['moon','mercury','venus','sun','mars','jupiter','saturn','stellatum','primum'];
+  for(const n of SPHERE_IDS){
+    const el=document.getElementById('sph-'+n);
+    const sp=crystalSpheres[n];
+    if(!sp) continue;
+    if(n==='sun' && c==='copernican'){
+      sp.visible=false; // Sun has no sphere in Copernican
+    } else {
+      sp.visible=el?el.checked:false;
+    }
+  }
+}
+
+  // Stellatum is fixed — the stars do not move relative to each other
+  updateSpheres();
+
+  // Update trail geometries
+  for(const name of NAMES){
+    if(!S.enabled.has(name)) continue;
+    const to=trailObjs[name];
+    to.buf.fill(to.arr);
+    to.geo.attributes.position.needsUpdate=true;
+    to.geo.setDrawRange(0,to.buf.c);
+  }
+
+  updateMachinery(S.time);
+  updateEphemeris();
+}
+
+function updateEphemeris(){
+  const yr=S.time/365.25;
+  const dps=Math.pow(10,S.speedExp);
+  document.getElementById('sb-time').textContent=`Year ${yr>=0?'+':''}${yr.toFixed(3)}`;
+  const lines=[
+    `SIM DAY: ${S.time>=0?'+':''}${S.time.toFixed(0).padStart(8,'0')}`,
+    `SIM YR:  ${yr>=0?'+':''}${yr.toFixed(4).padStart(8,' ')}`,
+    `SPEED:   ${fmtSpd(dps)}`,
+    `MODEL:   ${S.cosmology.toUpperCase().slice(0,12)}`,
+    `STATUS:  ${S.paused?'PAUSED':S.reversed?'REVERSE':'RUNNING'}`,
+    `FOLLOW:  ${S.followTarget?S.followTarget.toUpperCase().padEnd(8):'-       '}`,  
+    `FPS:     ${fps}`,
+  ];
+  document.getElementById('ephemeris').innerHTML=lines.join('<br>');
+}
+
+// ── ANIMATION LOOP ────────────────────────────────────
+function animate(now){
+  requestAnimationFrame(animate);
+  const dt=Math.min((now-lastT)*0.001,0.1);
+  lastT=now;
+  fc++;
+  if(now-fpsT>1000){fps=fc;fc=0;fpsT=now;document.getElementById('sb-fps').textContent='FPS:'+fps;}
+  update(dt);
+  renderer.render(scene,camera);
+}
+
+window.addEventListener('load',init);
+</script>
+</body>
+</html>
